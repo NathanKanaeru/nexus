@@ -3,682 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deltalitehub Bot Panel</title>
+    <title>Nexus Bot Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        navy: { 900: '#1e1f22', 800: '#2b2d31', 700: '#313338', 600: '#383a40' },
-                        accent: { purple: '#5865F2', indigo: '#5865F2', cyan: '#23a559' }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --bg-deep: #1e1f22;
-            --bg-card: #2b2d31;
-            --bg-card2: #313338;
-            --border: rgba(255,255,255,0.06);
-            --purple: #5865F2;
-            --indigo: #5865F2;
-            --cyan: #23a559;
-            --text: #dbdee1;
-            --text-muted: #949ba4;
-        }
-        html, body { height: 100%; }
-        body {
-            background: var(--bg-card2);
-            color: var(--text);
-            font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            display: flex;
-            overflow: hidden;
-        }
-        
-        /* Custom Select */
-        .custom-select-wrapper { position: relative; width: 100%; user-select: none; }
-        .custom-select-trigger {
-            background: #1e1f22; border: none; color: var(--text); border-radius: 4px; padding: 10px 12px;
-            font-size: 0.95rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-        }
-        .custom-select-wrapper.open .custom-select-trigger { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-        .custom-select-options {
-            position: absolute; top: 100%; left: 0; right: 0; background: #2b2d31; border: 1px solid #1e1f22;
-            border-top: none; border-radius: 0 0 4px 4px; z-index: 50; display: none; max-height: 200px; overflow-y: auto;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.24);
-        }
-        .custom-select-wrapper.open .custom-select-options { display: block; animation: selectFadeIn 0.1s ease-out; }
-        .custom-select-option { padding: 8px 12px; cursor: pointer; font-size: 0.95rem; color: var(--text-muted); display:flex; align-items:center; gap:8px;}
-        .custom-select-option:hover { background: #35373c; color: var(--text); }
-        .custom-select-option.selected { background: #404249; color: var(--text); }
-        @keyframes selectFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* DM Sidebar Item */
-        .dm-user-item {
-            display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: 4px; cursor: pointer; margin-bottom: 2px;
-            transition: background 0.1s;
-        }
-        .dm-user-item:hover { background: #35373c; }
-        .dm-user-item.active { background: #404249; color: white; }
-        
-        /* Spin utility for Lucide */
-        .lucide-spin { animation: spin 2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #2b2d31; }
-        ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; border: 2px solid #2b2d31; }
-        ::-webkit-scrollbar-thumb:hover { background: #111214; }
-
-        /* Glassmorphism overrides */
-        .glass, .glass-dark {
-            background: #2b2d31 !important;
-            border: none !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            border-radius: 8px !important;
-        }
-        .glass-dark {
-            background: #1e1f22 !important;
-        }
-
-        /* Sidebar */
-        #sidebar {
-            width: 240px;
-            min-width: 240px;
-            height: 100vh;
-            background: #2b2d31 !important;
-            border-right: none !important;
-            display: flex;
-            flex-direction: column;
-            overflow-y: hidden;
-            overflow-x: hidden;
-            z-index: 10;
-        }
-        #sidebar:hover { overflow-y: auto; }
-        
-        /* Main */
-        #main {
-            flex: 1;
-            height: 100vh;
-            overflow-y: auto;
-            overflow-x: hidden;
-            background: #313338 !important;
-        }
-
-        /* Nav item */
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px;
-            margin: 2px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            font-weight: 500;
-            transition: background-color 0.1s ease, color 0.1s ease;
-            user-select: none;
-        }
-        .nav-item:hover { background: #35373c; color: var(--text); }
-        .nav-item.active {
-            background: #404249 !important;
-            color: #fff !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        .nav-item.active .nav-icon { color: #fff !important; }
-
-        /* Stat cards */
-        .stat-card {
-            background: #2b2d31 !important;
-            border: none !important;
-            border-radius: 8px !important;
-            padding: 16px !important;
-            transition: background 0.1s !important;
-            box-shadow: none !important;
-        }
-        .stat-card:hover { transform: none !important; background: #2f3136 !important; box-shadow: none !important; }
-
-        /* Buttons */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 3px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            transition: background-color 0.15s ease;
-            outline: none;
-        }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-green { background: #23a559 !important; color: white !important; box-shadow: none !important; }
-        .btn-green:hover:not(:disabled) { background: #1a7a42 !important; transform: none !important; }
-        .btn-yellow { background: #f0b232 !important; color: white !important; box-shadow: none !important; }
-        .btn-yellow:hover:not(:disabled) { background: #b88622 !important; transform: none !important; }
-        .btn-blue, .btn-purple { background: #5865F2 !important; color: white !important; box-shadow: none !important; }
-        .btn-blue:hover:not(:disabled), .btn-purple:hover:not(:disabled) { background: #4752c4 !important; transform: none !important; }
-        .btn-red { background: #da373c !important; color: white !important; box-shadow: none !important; }
-        .btn-red:hover:not(:disabled) { background: #a1282c !important; transform: none !important; }
-        .btn-ghost { background: transparent !important; color: var(--text) !important; border: 1px solid var(--border) !important; box-shadow: none !important; }
-        .btn-ghost:hover:not(:disabled) { background: #3f4147 !important; border-color: transparent !important; }
-        .btn-icon { padding: 8px 10px; border-radius: 4px; }
-
-        /* Tab panels */
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; animation: fadeIn 0.15s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Status badge */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            border: none !important;
-        }
-        .badge-green { background: #23a559 !important; color: white !important; }
-        .badge-red { background: #da373c !important; color: white !important; }
-        .badge-blue { background: #5865F2 !important; color: white !important; }
-        .badge-cyan { background: #00a8fc !important; color: white !important; }
-
-        /* Pulse dot */
-        .pulse-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-        .pulse-dot.green { background: #23a559; box-shadow: none !important; animation: none !important; }
-        .pulse-dot.red { background: #da373c; box-shadow: none !important; animation: none !important; }
-
-        /* Member card */
-        .member-card {
-            background: #2b2d31 !important;
-            border: none !important;
-            border-radius: 4px !important;
-            padding: 8px 12px !important;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            transition: background 0.1s !important;
-        }
-        .member-card:hover { background: #35373c !important; border: none !important; }
-
-        /* Avatar ring */
-        .avatar-ring {
-            border-radius: 50%;
-            padding: 0 !important;
-            background: none !important;
-        }
-        .avatar-ring img { border-radius: 50%; display: block; border: none !important; }
-
-        /* Chat bubbles */
-        .chat-bubble {
-            max-width: 72%;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            line-height: 1.375;
-            word-break: break-word;
-        }
-        .bubble-bot {
-            background: #2b2d31 !important;
-            color: var(--text) !important;
-            align-self: flex-start !important;
-            border-radius: 8px !important;
-        }
-        .bubble-user {
-            background: #2b2d31 !important;
-            color: var(--text) !important;
-            border: none !important;
-            align-self: flex-start !important;
-            border-radius: 8px !important;
-        }
-
-        /* Select */
-        select {
-            background: #1e1f22 !important;
-            border: none !important;
-            color: var(--text) !important;
-            border-radius: 4px !important;
-            padding: 10px 12px !important;
-            font-size: 0.95rem;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            cursor: pointer;
-        }
-        select:focus { outline: 2px solid #00a8fc !important; box-shadow: none !important; }
-        select option { background: #2b2d31 !important; }
-
-        /* Input */
-        input[type="text"], textarea {
-            background: #1e1f22 !important;
-            border: none !important;
-            color: var(--text) !important;
-            border-radius: 4px !important;
-            padding: 10px 12px !important;
-            font-size: 0.95rem;
-            outline: none;
-        }
-        input[type="text"]:focus, textarea:focus { outline: 2px solid #00a8fc !important; box-shadow: none !important; border: none !important; }
-        input[type="text"]::placeholder, textarea::placeholder { color: var(--text-muted) !important; }
-        input[type="text"]:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* Modal backdrop */
-        #move-modal {
-            position: fixed; inset: 0; z-index: 100;
-            background: rgba(0,0,0,0.7) !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.15s ease;
-        }
-        #move-modal.open { opacity: 1; pointer-events: all; }
-        .modal-box {
-            background: #313338 !important;
-            border: none !important;
-            border-radius: 4px !important;
-            padding: 24px !important;
-            width: 100%;
-            max-width: 440px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.24) !important;
-            transform: scale(0.95);
-            transition: transform 0.15s ease !important;
-        }
-        #move-modal.open .modal-box { transform: scale(1) !important; }
-
-        /* Gradient icon bg removal */
-        .icon-bg-blue, .icon-bg-green, .icon-bg-purple, .icon-bg-cyan { 
-            background: transparent !important; color: var(--text-muted) !important; 
-        }
-
-        /* Divider */
-        .divider { height: 1px; background: rgba(255,255,255,0.06) !important; margin: 8px 16px !important; }
-
-        /* Sidebar section label */
-        .sidebar-label {
-            font-size: 0.75rem !important;
-            font-weight: 700 !important;
-            text-transform: uppercase !important;
-            color: #949ba4 !important;
-            padding: 0 16px !important;
-            margin-bottom: 4px !important;
-            letter-spacing: normal !important;
-        }
-
-        /* Top bar */
-        #topbar {
-            background: #313338 !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            border-bottom: 1px solid #1e1f22 !important;
-            padding: 12px 16px !important;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 5;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
-        }
-
-        /* Voice channel info card */
-        .voice-info-card {
-            background: #2b2d31 !important;
-            border: none !important;
-            border-radius: 8px !important;
-            padding: 16px !important;
-        }
-
-        /* DM chat area */
-        #chat-messages {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        /* Responsive sidebar toggle */
-        @media (max-width: 768px) {
-            #sidebar { position: fixed; left: -240px; transition: left 0.3s ease; }
-            #sidebar.open { left: 0; }
-            #main { width: 100%; }
-        }
-    </style>
+    <script>tailwind.config={theme:{extend:{colors:{navy:{900:'#1e1f22',800:'#2b2d31',700:'#313338',600:'#383a40'},accent:{purple:'#5865F2',indigo:'#5865F2',cyan:'#23a559'}}}}}</script>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
 
     <!-- ===== SIDEBAR ===== -->
     <aside id="sidebar">
-        <!-- Bot Avatar & Info -->
-        <div style="padding: 24px 20px 16px;">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-                <div class="avatar-ring" style="flex-shrink:0;">
-                    <img id="server-icon" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Server" style="width:44px;height:44px;">
+        <div class="server-section">
+            <div class="server-info">
+                <div class="server-icon-ring">
+                    <img id="server-icon" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Server">
+                    <div class="server-status-dot">
+                        <div class="server-status-dot-inner" id="sidebar-dot" style="background:var(--offline);"></div>
+                    </div>
                 </div>
-                <div style="min-width:0;">
-                    <div id="server-name" style="font-weight:700; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#e2e8f0;">Loading...</div>
-                    <div style="display:flex; align-items:center; gap:6px; margin-top:3px;">
-                        <span class="pulse-dot green" id="sidebar-dot"></span>
-                        <span style="font-size:0.7rem; color:#94a3b8;" id="sidebar-status-text">Connecting...</span>
+                <div class="server-info-text">
+                    <div id="server-name" class="server-name">Loading...</div>
+                    <div class="server-meta">
+                        <span class="pulse-dot" id="sidebar-dot-indicator" style="background:var(--offline);"></span>
+                        <span id="sidebar-status-text">Connecting...</span>
                     </div>
                 </div>
             </div>
-
-            <!-- Server info pill -->
-            <div class="glass-dark" style="padding:10px 14px; display:flex; align-items:center; gap:10px;">
-                <i data-lucide="server" class="" style="color:#6366f1; font-size:0.8rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                <div>
-                    <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Members</div>
-                    <div id="server-members" style="font-size:0.875rem; font-weight:700; color:#e2e8f0;">--</div>
-                </div>
+            <div class="sidebar-server-select">
+                <div id="guild-selector-container"></div>
+            </div>
+            <div class="server-member-info">
+                <i data-lucide="users" style="width:14px;height:14px;flex-shrink:0;color:var(--ink-muted);"></i>
+                <span id="server-members">--</span> members
             </div>
         </div>
 
-        <div class="divider"></div>
+        <div class="sidebar-divider"></div>
 
-        <!-- Navigation -->
-        <div style="padding: 12px 12px 8px;">
-            <div class="sidebar-label" style="margin-bottom:8px;">Navigation</div>
-            <nav style="display:flex; flex-direction:column; gap:3px;">
+        <div class="sidebar-scroll">
+            <div class="sidebar-label">Navigation</div>
+            <nav class="sidebar-nav">
                 <div class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
-                    <i data-lucide="layout-dashboard" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i>
                     <span>Dashboard</span>
                 </div>
                 <div class="nav-item" id="nav-voice" onclick="switchTab('voice')">
-                    <i data-lucide="headphones" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="mic-2" style="width:16px;height:16px;"></i>
                     <span>Voice Control</span>
                 </div>
                 <div class="nav-item" id="nav-dm" onclick="switchTab('dm')">
-                    <i data-lucide="message-square" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="message-square" style="width:16px;height:16px;"></i>
                     <span>DM Chat</span>
-                    <span id="dm-badge" style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:99px;">NEW</span>
+                    <span id="dm-badge" style="display:none; margin-left:auto; background:var(--dnd); color:white; font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:var(--radius-pill); animation:scaleCheck 0.3s ease-out;">NEW</span>
                 </div>
                 <div class="nav-item" id="nav-announce" onclick="switchTab('announce')">
-                    <i data-lucide="megaphone" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="megaphone" style="width:16px;height:16px;"></i>
                     <span>Announce</span>
                 </div>
                 <div class="nav-item" id="nav-logs" onclick="switchTab('logs')">
-                    <i data-lucide="list" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="scroll-text" style="width:16px;height:16px;"></i>
                     <span>Activity Log</span>
-                    <span id="log-badge" style="display:none; margin-left:auto; background:#6366f1; color:white; font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:99px;">NEW</span>
+                    <span id="log-badge" style="display:none; margin-left:auto; background:var(--primary); color:white; font-size:0.6rem; font-weight:700; padding:2px 6px; border-radius:var(--radius-pill);">NEW</span>
                 </div>
                 <div class="nav-item" id="nav-settings" onclick="switchTab('settings')">
-                    <i data-lucide="settings" style="width:16px; height:16px; text-align:center; display:inline-block;"></i>
+                    <i data-lucide="settings" style="width:16px;height:16px;"></i>
                     <span>Settings</span>
                 </div>
             </nav>
-        </div>
 
-        <div class="divider"></div>
+            <div class="sidebar-divider"></div>
 
-        <!-- Bot Voice Actions -->
-        <div style="padding: 12px 12px 20px;">
-            <div class="sidebar-label" style="margin-bottom:8px;">Bot Voice</div>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                <button class="btn btn-green" style="width:100%; justify-content:flex-start;" onclick="botAction('connect')">
-                    <i data-lucide="plug" class="" style="width:14px;" style="width:1em;height:1em;display:inline-block;"></i> Connect
+            <div class="sidebar-label">Bot Voice</div>
+            <div class="sidebar-voice-actions">
+                <button class="sidebar-action-btn" onclick="openConnectModal()">
+                    <i data-lucide="cable" style="width:14px;height:14px;color:var(--online);"></i> Connect
                 </button>
-                <button class="btn btn-yellow" style="width:100%; justify-content:flex-start;" onclick="botAction('reconnect')">
-                    <i data-lucide="refresh-cw" class="" style="width:14px;" style="width:1em;height:1em;display:inline-block;"></i> Reconnect
+                <button class="sidebar-action-btn" onclick="botAction('reconnect')">
+                    <i data-lucide="refresh-cw" style="width:14px;height:14px;color:var(--idle);"></i> Reconnect
                 </button>
-                <button class="btn btn-blue" style="width:100%; justify-content:flex-start;" onclick="openMoveModal('bot')">
-                    <i data-lucide="arrow-left-right" class="" style="width:14px;" style="width:1em;height:1em;display:inline-block;"></i> Move Bot
+                <button class="sidebar-action-btn" onclick="openMoveModal('bot')">
+                    <i data-lucide="shuffle" style="width:14px;height:14px;color:var(--primary);"></i> Move Bot
                 </button>
-                <button class="btn btn-red" style="width:100%; justify-content:flex-start;" onclick="botAction('disconnect')">
-                    <i data-lucide="power" class="" style="width:14px;" style="width:1em;height:1em;display:inline-block;"></i> Disconnect
+                <button class="sidebar-action-btn" onclick="botAction('disconnect')">
+                    <i data-lucide="power-off" style="width:14px;height:14px;color:var(--dnd);"></i> Disconnect
                 </button>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div style="margin-top:auto; padding:16px 20px; border-top:1px solid rgba(255,255,255,0.06);">
-            <div style="font-size:0.7rem; color:#475569; text-align:center;">Deltalitehub Panel v2.0</div>
-        </div>
+        <div class="sidebar-footer">Nexus Panel v3.0</div>
     </aside>
 
     <!-- ===== MAIN CONTENT ===== -->
     <main id="main">
-        <!-- Top Bar -->
         <div id="topbar">
-            <div style="display:flex; align-items:center; gap:12px;">
-                <button onclick="document.getElementById('sidebar').classList.toggle('open')" style="display:none; background:none; border:none; color:#94a3b8; cursor:pointer; font-size:1.1rem;" id="menu-toggle">
-                    <i data-lucide="menu" class="" style="width:1em;height:1em;display:inline-block;"></i>
+            <div class="topbar-left">
+                <button id="menu-toggle" onclick="toggleSidebar()">
+                    <i data-lucide="menu" style="width:20px;height:20px;"></i>
                 </button>
-                <div>
-                    <h1 id="page-title" style="font-size:1.1rem; font-weight:700; color:#e2e8f0;">Dashboard</h1>
-                    <p style="font-size:0.7rem; color:#64748b; margin-top:1px;">Bot Control Panel</p>
-                </div>
+                <h1 id="page-title">Dashboard</h1>
             </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-                <div id="connection-status" style="display:flex; align-items:center; gap:7px; padding:6px 14px; border-radius:99px; font-size:0.75rem; font-weight:700; background:rgba(239,68,68,0.12); color:#f87171; border:1px solid rgba(239,68,68,0.25);">
+            <div class="topbar-right">
+                <div id="connection-status">
                     <span class="pulse-dot red" id="conn-dot"></span>
                     <span id="conn-text">Disconnected</span>
                 </div>
-                <a href="/logout" title="Sign out" style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);color:#949ba4;text-decoration:none;transition:background .15s,color .15s;" onmouseover="this.style.background='rgba(218,55,60,0.2)';this.style.color='#f87171'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='#949ba4'">
+                <a href="/logout" class="logout-btn" title="Sign out">
                     <i data-lucide="log-out" style="width:15px;height:15px;"></i>
                 </a>
             </div>
         </div>
 
-        <!-- Content Panels -->
-        <div style="padding: 24px 28px;">
+        <div id="main-content">
 
             <!-- ===== DASHBOARD TAB ===== -->
             <div class="tab-panel active" id="tab-dashboard">
-                <!-- Stat Cards -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:24px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
                     <div class="stat-card">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div class="icon-bg-blue" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
-                                <i data-lucide="activity" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                            <div class="stat-icon" style="background:rgba(88,101,242,0.1); color:var(--primary);">
+                                <i data-lucide="activity" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Ping</div>
-                                <div id="stat-ping" style="font-size:1.4rem; font-weight:800; color:#e2e8f0; line-height:1.2;">-- ms</div>
+                                <div class="form-label" style="margin-bottom:2px;">Ping</div>
+                                <div id="stat-ping" style="font-size:1.4rem; font-weight:800; color:var(--ink); line-height:1.2;">-- ms</div>
                             </div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div class="icon-bg-green" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
-                                <i data-lucide="clock" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                            <div class="stat-icon" style="background:rgba(35,165,90,0.1); color:var(--online);">
+                                <i data-lucide="clock" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Uptime</div>
-                                <div id="stat-uptime" style="font-size:1.4rem; font-weight:800; color:#e2e8f0; line-height:1.2;">-- min</div>
+                                <div class="form-label" style="margin-bottom:2px;">Uptime</div>
+                                <div id="stat-uptime" style="font-size:1.4rem; font-weight:800; color:var(--ink); line-height:1.2;">-- min</div>
                             </div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div class="icon-bg-purple" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
-                                <i data-lucide="layers" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                            <div class="stat-icon" style="background:rgba(240,178,50,0.1); color:var(--idle);">
+                                <i data-lucide="git-branch" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Servers</div>
-                                <div id="stat-guilds" style="font-size:1.4rem; font-weight:800; color:#e2e8f0; line-height:1.2;">--</div>
+                                <div class="form-label" style="margin-bottom:2px;">Servers</div>
+                                <div id="stat-guilds" style="font-size:1.4rem; font-weight:800; color:var(--ink); line-height:1.2;">--</div>
                             </div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div style="display:flex; align-items:center; gap:14px;">
-                            <div class="icon-bg-cyan" style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
-                                <i data-lucide="users" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                            <div class="stat-icon" style="background:rgba(242,63,67,0.1); color:var(--dnd);">
+                                <i data-lucide="users" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">Users</div>
-                                <div id="stat-users" style="font-size:1.4rem; font-weight:800; color:#e2e8f0; line-height:1.2;">--</div>
+                                <div class="form-label" style="margin-bottom:2px;">Users</div>
+                                <div id="stat-users" style="font-size:1.4rem; font-weight:800; color:var(--ink); line-height:1.2;">--</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Voice Channel Info Card -->
-                <div class="voice-info-card">
-                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
-                        <div style="display:flex; align-items:center; gap:14px;">
-                            <div style="width:48px; height:48px; border-radius:14px; background:#2b2d31; display:flex; align-items:center; justify-content:center; font-size:1.2rem; color:white; flex-shrink:0;">
-                                <i data-lucide="volume-2" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                <div class="dash-grid-2">
+                    <!-- Server Info Card -->
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i data-lucide="server" style="width:16px;height:16px;color:var(--primary);flex-shrink:0;"></i>
+                            <h3>Current Server</h3>
+                        </div>
+                        <div class="info-card-body">
+                            <div class="info-row">
+                                <span class="info-row-label">Name</span>
+                                <span class="info-row-value" id="dash-server-name">--</span>
                             </div>
-                            <div>
-                                <div style="font-size:0.7rem; color:#a78bfa; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">Current Voice Channel</div>
-                                <div id="voice-status" style="font-size:1rem; font-weight:700; color:#e2e8f0;">Loading...</div>
+                            <div class="info-row">
+                                <span class="info-row-label">Members</span>
+                                <span class="info-row-value" id="dash-server-members">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Voice Channel</span>
+                                <span class="info-row-value" id="dash-server-voice">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Status</span>
+                                <span class="info-row-value" id="dash-server-status">
+                                    <span class="badge badge-red">Disconnected</span>
+                                </span>
                             </div>
                         </div>
-                        <div id="voice-status-badge"></div>
                     </div>
+
+                    <!-- Bot Info Card -->
+                    <div class="info-card">
+                        <div class="info-card-header">
+                            <i data-lucide="bot" style="width:16px;height:16px;color:#a78bfa;flex-shrink:0;"></i>
+                            <h3>Bot Status</h3>
+                        </div>
+                        <div class="info-card-body">
+                            <div class="info-row">
+                                <span class="info-row-label">Username</span>
+                                <span class="info-row-value" id="dash-bot-name">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Status</span>
+                                <span class="info-row-value" id="dash-bot-status">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Activity</span>
+                                <span class="info-row-value small" id="dash-bot-activity">--</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-row-label">Bot ID</span>
+                                <span class="info-row-value small" id="dash-bot-id">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-actions">
+                    <button class="btn btn-primary btn-sm" onclick="switchTab('voice')">
+                        <i data-lucide="headphones" style="width:14px;height:14px;"></i> Go to Voice
+                    </button>
+                    <button class="btn btn-blue btn-sm" onclick="switchTab('settings')">
+                        <i data-lucide="settings" style="width:14px;height:14px;"></i> Open Settings
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="switchTab('dm')">
+                        <i data-lucide="message-square" style="width:14px;height:14px;"></i> DM Chat
+                    </button>
                 </div>
             </div>
 
             <!-- ===== VOICE TAB ===== -->
             <div class="tab-panel" id="tab-voice">
-                <!-- Channel info + bulk actions -->
-                <div class="glass" style="padding:20px; margin-bottom:20px;">
-                    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
-                        <i data-lucide="headphones" class="" style="color:#6366f1; font-size:1.1rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                        <div style="flex:1; min-width:200px;">
-                            <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">Voice Channel</div>
-                            <div style="font-size:0.9rem; font-weight:600; color:#e2e8f0;" id="voice-channel-name-voice">--</div>
+                <div id="voice-connected-section">
+                    <div class="glass" style="margin-bottom:20px;">
+                        <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:16px;">
+                            <div style="width:36px;height:36px;border-radius:10px;background:rgba(88,101,242,0.1);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="headphones" style="color:var(--primary); width:18px;height:18px;"></i>
+                            </div>
+                            <div style="flex:1; min-width:200px;">
+                                <div class="form-label">Voice Channel</div>
+                                <div style="font-size:0.95rem; font-weight:600; color:var(--ink);" id="voice-channel-name-voice">--</div>
+                            </div>
+                            <span id="voice-member-count" class="badge badge-blue">0 members</span>
                         </div>
-                        <span id="voice-member-count" class="badge badge-blue">0 members</span>
+                        <div style="display:flex; gap:8px; margin-bottom:14px;">
+                            <button class="btn btn-red btn-sm" onclick="disconnectBotFromVoice()">
+                                <i data-lucide="power-off" style="width:14px;height:14px;"></i> Disconnect Bot
+                            </button>
+                        </div>
+                        <div class="sidebar-divider" style="margin:0 0 14px;"></div>
+                        <div>
+                            <div class="form-label" style="margin-bottom:10px;">Bulk Actions</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                <button class="btn btn-ghost btn-sm" onclick="bulkAction('mute_all')">
+                                    <i data-lucide="mic-off" style="width:14px;height:14px;"></i> Mute All
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="bulkAction('unmute_all')">
+                                    <i data-lucide="mic" style="width:14px;height:14px;"></i> Unmute All
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="bulkAction('deafen_all')">
+                                    <i data-lucide="ear-off" style="width:14px;height:14px;"></i> Deafen All
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="bulkAction('undeafen_all')">
+                                    <i data-lucide="ear" style="width:14px;height:14px;"></i> Undeafen All
+                                </button>
+                                <button class="btn btn-red btn-sm" onclick="confirmKickAll()">
+                                    <i data-lucide="user-x" style="width:14px;height:14px;"></i> Kick All
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <!-- Bulk Actions -->
-                    <div style="border-top:1px solid rgba(255,255,255,0.06); padding-top:14px;">
-                        <div style="font-size:0.7rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">Bulk Actions</div>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                            <button class="btn btn-ghost" style="font-size:0.8rem; padding:7px 12px;" onclick="bulkAction('mute_all')">
-                                <i data-lucide="mic-off" class="" style="width:1em;height:1em;display:inline-block;"></i> Mute All
-                            </button>
-                            <button class="btn btn-ghost" style="font-size:0.8rem; padding:7px 12px;" onclick="bulkAction('unmute_all')">
-                                <i data-lucide="mic" class="" style="width:1em;height:1em;display:inline-block;"></i> Unmute All
-                            </button>
-                            <button class="btn btn-ghost" style="font-size:0.8rem; padding:7px 12px;" onclick="bulkAction('deafen_all')">
-                                <i data-lucide="headphones" class="" style="width:1em;height:1em;display:inline-block;"></i> Deafen All
-                            </button>
-                            <button class="btn btn-ghost" style="font-size:0.8rem; padding:7px 12px;" onclick="bulkAction('undeafen_all')">
-                                <i data-lucide="headphones" class="" style="width:1em;height:1em;display:inline-block;"></i> Undeafen All
-                            </button>
-                            <button class="btn btn-red" style="font-size:0.8rem; padding:7px 12px;" onclick="confirmKickAll()">
-                                <i data-lucide="phone-off" class="" style="width:1em;height:1em;display:inline-block;"></i> Kick All
-                            </button>
-                            <button class="btn btn-purple" style="font-size:0.8rem; padding:7px 12px;" onclick="openBroadcastModal()">
-                                <i data-lucide="send" class="" style="width:1em;height:1em;display:inline-block;"></i> Broadcast DM
-                            </button>
+                    <div id="members-list" style="display:flex; flex-direction:column; gap:8px;">
+                        <div class="empty-state">
+                            <i data-lucide="loader" class="lucide-spin" style="width:24px;height:24px;margin:0 auto 12px;"></i>
+                            <p>Loading members...</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Members grid -->
-                <div id="members-list" style="display:flex; flex-direction:column; gap:10px;">
-                    <div style="text-align:center; padding:40px; color:#475569;">
-                        <i data-lucide="loader-2" class="lucide-spin " style="font-size:1.5rem; margin-bottom:10px; display:block;" style="width:1em;height:1em;display:inline-block;"></i>
-                        Loading members...
+                <div id="voice-disconnected-section" style="display:none;">
+                    <div class="glass">
+                        <div class="voice-connect-prompt">
+                            <div class="voice-connect-icon">
+                                <i data-lucide="volume-x" style="width:28px;height:28px;color:var(--primary);"></i>
+                            </div>
+                            <h3>Not Connected</h3>
+                            <p>Bot is not in a voice channel. Select a channel and connect.</p>
+                            <div class="voice-connect-dropdown" id="voice-connect-container"></div>
+                            <button class="btn btn-primary btn-connect" id="voice-connect-btn" onclick="connectBotFromVoiceTab()" disabled>
+                                <i data-lucide="cable" style="width:16px;height:16px;"></i> Connect to Voice
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            
             <!-- ===== DM TAB ===== -->
             <div class="tab-panel" id="tab-dm">
-                <div style="display:grid; grid-template-columns:240px 1fr; gap:20px; height:calc(100vh - 140px); min-height:400px;">
-                    <!-- User list sidebar -->
-                    <div style="background:#2b2d31; border-radius:4px; display:flex; flex-direction:column; overflow:hidden;">
-                        <div style="padding:16px; border-bottom:1px solid #1e1f22;">
-                            <div style="font-size:0.75rem; color:#949ba4; font-weight:700; text-transform:uppercase;">Direct Messages</div>
+                <div class="dm-container">
+                    <div class="dm-user-panel" id="dm-user-panel">
+                        <div class="dm-user-panel-header">
+                            <i data-lucide="message-square" style="width:14px;height:14px;"></i> Direct Messages
                         </div>
-                        <div id="dm-user-list" style="flex:1; overflow-y:auto; padding:8px;">
-                            <div style="text-align:center; padding:20px; color:#949ba4; font-size:0.875rem;"><i data-lucide="loader-2" class="lucide-spin" style="margin-bottom:8px;"></i><br>Waiting for users...</div>
+                        <div class="dm-user-list" id="dm-user-list">
+                            <div class="empty-state">
+                                <i data-lucide="loader" class="lucide-spin" style="width:16px;height:16px;margin:0 auto 8px;"></i>
+                                <p style="font-size:0.85rem;">Waiting for users...</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Chat window -->
-                    <div style="background:#313338; display:flex; flex-direction:column; overflow:hidden; border-radius:4px; border:1px solid #1e1f22;">
-                        <!-- Chat header -->
-                        <div style="padding:12px 18px; border-bottom:1px solid #1e1f22; display:flex; align-items:center; gap:12px; background:#2b2d31;">
-                            <div style="position:relative; flex-shrink:0;">
-                                <img id="chat-header-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" style="width:36px;height:36px;border-radius:50%;display:block;">
-                                <div id="chat-header-presence-dot" style="position:absolute;bottom:-1px;right:-1px;width:13px;height:13px;background:#2b2d31;border-radius:50%;display:flex;align-items:center;justify-content:center;">
-                                    <div id="chat-header-presence-inner" style="width:9px;height:9px;background:#80848e;border-radius:50%;"></div>
+                    <div class="dm-chat-panel" id="dm-chat-panel">
+                        <div class="dm-chat-body">
+                            <div class="dm-chat-panel-header">
+                                <button class="dm-back-btn btn btn-ghost btn-icon" onclick="showDMUsers()" title="Back to users">
+                                    <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+                                </button>
+                                <div class="header-avatar">
+                                    <img id="chat-header-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+                                    <div class="presence-ring">
+                                        <div id="chat-header-presence-inner" class="presence-ring-inner" style="background:var(--offline);"></div>
+                                    </div>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div class="header-name" id="chat-header-name">No user selected</div>
+                                    <div class="header-status" id="chat-header-status">Select a user from the list</div>
                                 </div>
                             </div>
-                            <div style="flex:1;min-width:0;">
-                                <div id="chat-header-name" style="font-size:0.95rem; font-weight:700; color:#dbdee1;">No user selected</div>
-                                <div id="chat-header-status" style="font-size:0.72rem; color:#949ba4; margin-top:1px;">Select a user from the list</div>
-                            </div>
-                        </div>
 
-                        <!-- Reply bar (hidden by default) -->
-                        <div id="reply-bar" style="display:none; padding:6px 16px; background:#2e3035; border-bottom:1px solid #1e1f22; align-items:center; gap:10px;">
-                            <div style="flex:1; min-width:0;">
-                                <span style="font-size:0.72rem; color:#949ba4;">Replying to </span>
-                                <span id="reply-to-name" style="font-size:0.72rem; color:#00a8fc; font-weight:600;"></span>
-                                <div id="reply-preview" style="font-size:0.75rem; color:#949ba4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px;"></div>
+                            <div id="reply-bar" class="reply-bar">
+                                <div style="flex:1; min-width:0;">
+                                    <span style="font-size:0.72rem; color:var(--ink-muted);">Replying to </span>
+                                    <span id="reply-to-name" style="font-size:0.72rem; color:#00a8fc; font-weight:600;"></span>
+                                    <div id="reply-preview" style="font-size:0.75rem; color:var(--ink-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px;"></div>
+                                </div>
+                                <button class="chat-action-btn" onclick="cancelReply()" title="Cancel reply">
+                                    <i data-lucide="x" style="width:14px;height:14px;"></i>
+                                </button>
                             </div>
-                            <button onclick="cancelReply()" style="background:none;border:none;color:#949ba4;cursor:pointer;padding:4px;border-radius:4px;" title="Cancel reply">
-                                <i data-lucide="x" style="width:14px;height:14px;"></i>
-                            </button>
-                        </div>
 
-                        <!-- Messages -->
-                        <div id="chat-messages" style="flex:1; padding:16px 16px 8px; overflow-y:auto; display:flex; flex-direction:column; gap:2px;">
-                            <div data-placeholder style="display:flex; flex:1; align-items:center; justify-content:center; height:100%; color:#949ba4; font-size:0.95rem; text-align:center;">
-                                <div>
-                                    <i data-lucide="message-square" style="width:48px; height:48px; margin-bottom:12px; opacity:0.3; display:block; margin:0 auto;"></i>
-                                    Select a user to start chatting
+                            <div id="chat-messages">
+                                <div data-placeholder class="empty-state" style="padding:40px 20px;">
+                                    <div>
+                                        <i data-lucide="message-square" style="width:48px; height:48px; margin-bottom:12px; opacity:0.3; display:block; margin:0 auto;"></i>
+                                        Select a user to start chatting
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Input bar -->
-                        <div style="padding:0 16px 16px;">
-                            <div style="background:#383a40; border-radius:8px; overflow:hidden;">
-                                <div style="display:flex; align-items:center; gap:4px; padding:0 8px;">
-                                    <!-- Emoji button -->
+                            <div class="chat-input-area">
+                                <div class="chat-input-inner">
                                     <div style="position:relative;">
-                                        <button id="emoji-btn" onclick="toggleEmojiPicker(event)" title="Emoji" style="background:none;border:none;color:#949ba4;cursor:pointer;padding:8px 6px;border-radius:4px;font-size:1.2rem;line-height:1;transition:color 0.15s;" onmouseover="this.style.color='#dbdee1'" onmouseout="this.style.color='#949ba4'">
-                                            😊
-                                        </button>
-                                        <!-- Emoji Picker -->
-                                        <div id="emoji-picker" style="display:none;position:absolute;bottom:44px;left:0;background:#2b2d31;border:1px solid #1e1f22;border-radius:8px;padding:10px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:50;">
-                                            <div style="display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid #1e1f22;padding-bottom:8px;overflow-x:auto;">
-                                                <button onclick="setEmojiCategory('smileys')" id="ecat-smileys" class="emoji-cat-btn active" style="background:rgba(255,255,255,0.1);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:0.9rem;white-space:nowrap;color:#dbdee1;">😀 Smileys</button>
-                                                <button onclick="setEmojiCategory('gestures')" id="ecat-gestures" class="emoji-cat-btn" style="background:none;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:0.9rem;white-space:nowrap;color:#949ba4;">👋 Gestures</button>
-                                                <button onclick="setEmojiCategory('hearts')" id="ecat-hearts" class="emoji-cat-btn" style="background:none;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:0.9rem;white-space:nowrap;color:#949ba4;">❤️ Hearts</button>
-                                                <button onclick="setEmojiCategory('objects')" id="ecat-objects" class="emoji-cat-btn" style="background:none;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:0.9rem;white-space:nowrap;color:#949ba4;">🎮 Objects</button>
-                                                <button onclick="setEmojiCategory('symbols')" id="ecat-symbols" class="emoji-cat-btn" style="background:none;border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:0.9rem;white-space:nowrap;color:#949ba4;">🔥 Symbols</button>
+                                        <button id="emoji-btn" class="chat-action-btn" onclick="toggleEmojiPicker(event)" title="Emoji" style="font-size:1.2rem;line-height:1;">😊</button>
+                                        <div id="emoji-picker">
+                                            <div style="display:flex;gap:4px;margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:8px;overflow-x:auto;">
+                                                <button onclick="setEmojiCategory('smileys')" id="ecat-smileys" class="emoji-cat-btn active">😀 Smileys</button>
+                                                <button onclick="setEmojiCategory('gestures')" id="ecat-gestures" class="emoji-cat-btn">👋 Gestures</button>
+                                                <button onclick="setEmojiCategory('hearts')" id="ecat-hearts" class="emoji-cat-btn">❤️ Hearts</button>
+                                                <button onclick="setEmojiCategory('objects')" id="ecat-objects" class="emoji-cat-btn">🎮 Objects</button>
+                                                <button onclick="setEmojiCategory('symbols')" id="ecat-symbols" class="emoji-cat-btn">🔥 Symbols</button>
                                             </div>
                                             <div id="emoji-grid" style="display:grid;grid-template-columns:repeat(8,1fr);gap:2px;max-height:180px;overflow-y:auto;"></div>
                                         </div>
                                     </div>
-                                    <input type="text" id="chat-input" placeholder="Message @User" style="flex:1;background:transparent;border:none;padding:11px 4px;font-size:0.9375rem;color:#dbdee1;outline:none;" disabled>
-                                    <!-- Send button -->
-                                    <button id="btn-send-chat" onclick="sendChat()" disabled title="Send" style="background:none;border:none;color:#949ba4;cursor:pointer;padding:8px 6px;border-radius:4px;transition:color 0.15s;" onmouseover="this.style.color='#5865f2'" onmouseout="this.style.color='#949ba4'">
+                                    <input type="text" id="chat-input" placeholder="Message @User" disabled>
+                                    <button id="btn-send-chat" class="chat-action-btn send" onclick="sendChat()" disabled title="Send">
                                         <i data-lucide="send" style="width:18px;height:18px;"></i>
                                     </button>
                                 </div>
@@ -688,57 +381,63 @@
                 </div>
             </div>
 
-
             <!-- ===== ANNOUNCE TAB ===== -->
             <div class="tab-panel" id="tab-announce">
-                <div style="max-width:680px; display:flex; flex-direction:column; gap:20px;">
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-                            <div style="width:36px; height:36px; border-radius:10px; background:#2b2d31; display:flex; align-items:center; justify-content:center; color:#60a5fa;">
-                                <i data-lucide="hash" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                <div class="announce-context-bar" id="announce-context">
+                    <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;color:var(--primary);"></i>
+                    <span>Sending to server: <strong id="announce-server-name">Loading...</strong></span>
+                </div>
+
+                <div class="announce-layout">
+                    <div class="announce-card">
+                        <div class="announce-card-header">
+                            <div class="announce-card-icon" style="background:rgba(96,165,250,0.1);color:#60a5fa;">
+                                <i data-lucide="hash" style="width:18px;height:18px;"></i>
                             </div>
-                            <div>
-                                <div style="font-weight:700; font-size:0.9rem; color:#e2e8f0;">Send to Text Channel</div>
-                                <div style="font-size:0.75rem; color:#64748b;">Post a message to any server channel</div>
+                            <div class="announce-card-header-text">
+                                <h3>Send to Text Channel</h3>
+                                <p>Post a message to any text channel</p>
                             </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div>
-                                <label style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">Target Channel</label>
-                                <div style="position:relative;">
-                                    <select id="announce-channel-select" style="width:100%; padding-right:36px;"><option value="">-- Select Channel --</option></select>
-                                    <i data-lucide="chevron-down" class="" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:0.75rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                                </div>
+                        <div class="announce-card-body">
+                            <div class="form-group" style="margin:0 0 14px;">
+                                <label class="form-label">Target Channel</label>
+                                <div id="announce-channel-container"></div>
                             </div>
-                            <div>
-                                <label style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">Message</label>
-                                <textarea id="announce-message" placeholder="Type your announcement..." rows="4" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; border-radius:10px; padding:10px 14px; font-size:0.875rem; outline:none; resize:vertical; font-family:inherit; transition:border-color 0.2s;" onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Message</label>
+                                <textarea id="announce-message" class="announce-textarea" placeholder="Type your announcement..." rows="4"></textarea>
                             </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <button class="btn btn-blue" onclick="sendAnnounce()"><i data-lucide="megaphone" class="" style="width:1em;height:1em;display:inline-block;"></i> Send Announcement</button>
-                                <span id="announce-status" style="font-size:0.8rem; color:#64748b;"></span>
-                            </div>
+                        </div>
+                        <div class="announce-card-footer">
+                            <button class="btn btn-blue" onclick="sendAnnounce()" id="btn-send-announce">
+                                <i data-lucide="megaphone" style="width:16px;height:16px;"></i> Send
+                            </button>
+                            <span id="announce-status" class="announce-status"></span>
                         </div>
                     </div>
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
-                            <div style="width:36px; height:36px; border-radius:10px; background:#2b2d31; display:flex; align-items:center; justify-content:center; color:#a78bfa;">
-                                <i data-lucide="send" class="" style="width:1em;height:1em;display:inline-block;"></i>
+
+                    <div class="announce-card">
+                        <div class="announce-card-header">
+                            <div class="announce-card-icon" style="background:rgba(167,139,250,0.1);color:#a78bfa;">
+                                <i data-lucide="send" style="width:18px;height:18px;"></i>
                             </div>
-                            <div>
-                                <div style="font-weight:700; font-size:0.9rem; color:#e2e8f0;">Broadcast DM</div>
-                                <div style="font-size:0.75rem; color:#64748b;">Send a DM to all members currently in voice</div>
+                            <div class="announce-card-header-text">
+                                <h3>Broadcast DM</h3>
+                                <p>DM all members currently in voice</p>
                             </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:12px;">
-                            <div>
-                                <label style="font-size:0.75rem; color:#64748b; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:6px;">Message</label>
-                                <textarea id="broadcast-message" placeholder="Type your broadcast message..." rows="4" style="width:100%; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); color:#e2e8f0; border-radius:10px; padding:10px 14px; font-size:0.875rem; outline:none; resize:vertical; font-family:inherit; transition:border-color 0.2s;" onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'"></textarea>
+                        <div class="announce-card-body">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Message</label>
+                                <textarea id="broadcast-message" class="announce-textarea" placeholder="Type your broadcast message..." rows="4"></textarea>
                             </div>
-                            <div style="display:flex; align-items:center; gap:10px;">
-                                <button class="btn btn-purple" onclick="sendBroadcast()"><i data-lucide="send" class="" style="width:1em;height:1em;display:inline-block;"></i> Send Broadcast</button>
-                                <span id="broadcast-status" style="font-size:0.8rem; color:#64748b;"></span>
-                            </div>
+                        </div>
+                        <div class="announce-card-footer">
+                            <button class="btn btn-primary" onclick="sendBroadcast()" id="btn-send-broadcast">
+                                <i data-lucide="send" style="width:16px;height:16px;"></i> Send Broadcast
+                            </button>
+                            <span id="broadcast-status" class="announce-status"></span>
                         </div>
                     </div>
                 </div>
@@ -747,1111 +446,258 @@
             <!-- ===== LOGS TAB ===== -->
             <div class="tab-panel" id="tab-logs">
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
-                    <div style="font-size:0.75rem; color:#64748b;">Showing last 100 events — auto updates in realtime</div>
-                    <button class="btn btn-ghost" style="font-size:0.8rem; padding:7px 12px;" onclick="clearLogs()">
-                        <i data-lucide="trash-2" class="" style="width:1em;height:1em;display:inline-block;"></i> Clear Display
+                    <div style="font-size:0.75rem; color:var(--ink-muted);">Showing last 100 events — auto updates in realtime</div>
+                    <button class="btn btn-ghost btn-sm" onclick="clearLogs()">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear Display
                     </button>
                 </div>
                 <div id="logs-list" style="display:flex; flex-direction:column; gap:6px;">
-                    <div style="text-align:center; padding:40px; color:#475569;">
-                        <i data-lucide="loader-2" class="lucide-spin " style="font-size:1.5rem; margin-bottom:10px; display:block;" style="width:1em;height:1em;display:inline-block;"></i>
-                        Loading logs...
+                    <div class="empty-state">
+                        <i data-lucide="loader" class="lucide-spin" style="width:24px;height:24px;margin:0 auto 12px;"></i>
+                        <p>Loading logs...</p>
                     </div>
                 </div>
             </div>
 
             <!-- ===== SETTINGS TAB ===== -->
             <div class="tab-panel" id="tab-settings">
-                <div style="max-width:720px; display:flex; flex-direction:column; gap:20px;">
+                <div class="settings-container">
 
                     <!-- Bot Identity -->
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex; align-items:center; gap:10px; margin-bottom:20px;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:#2b2d31;display:flex;align-items:center;justify-content:center;color:#a78bfa;">
-                                <i data-lucide="bot" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                    <div class="card-glass">
+                        <div class="card-glass-header">
+                            <div class="settings-section-icon" style="background:rgba(167,139,250,0.1); color:#a78bfa;">
+                                <i data-lucide="bot" style="width:18px;height:18px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:700;font-size:0.9rem;color:#e2e8f0;">Bot Identity</div>
-                                <div style="font-size:0.75rem;color:#64748b;">Change bot username and profile picture</div>
+                                <div class="card-glass-title">Bot Identity</div>
+                                <div class="card-glass-sub">Change bot username and profile picture</div>
                             </div>
                         </div>
 
-                        <!-- Bot preview card -->
-                        <div style="display:flex;align-items:center;gap:16px;padding:16px;background:rgba(0,0,0,0.2);border-radius:12px;border:1px solid rgba(255,255,255,0.06);margin-bottom:20px;">
-                            <div class="avatar-ring" style="flex-shrink:0;">
-                                <img id="settings-bot-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" style="width:56px;height:56px;">
+                        <div class="identity-card">
+                            <div class="identity-avatar-col">
+                                <div class="avatar-ring lg">
+                                    <img id="settings-bot-avatar" src="https://cdn.discordapp.com/embed/avatars/0.png">
+                                    <div class="avatar-badge">
+                                        <i data-lucide="bot" style="width:10px;height:10px;"></i>
+                                    </div>
+                                </div>
+                                <div class="identity-status-dot" id="identity-status-indicator"></div>
                             </div>
-                            <div>
-                                <div id="settings-bot-username" style="font-weight:700;font-size:1rem;color:#e2e8f0;">Loading...</div>
-                                <div id="settings-bot-tag" style="font-size:0.75rem;color:#64748b;margin-top:2px;"></div>
-                                <div id="settings-bot-id" style="font-size:0.65rem;color:#475569;margin-top:2px;font-family:monospace;"></div>
+                            <div class="identity-details-col">
+                                <div id="settings-bot-username" class="identity-name">Loading...</div>
+                                <div id="settings-bot-tag" class="identity-tag"></div>
+                                <div id="settings-bot-id" class="identity-id"></div>
+                                <div class="identity-status-row">
+                                    <span class="identity-status-badge" id="identity-status-badge">
+                                        <span class="pulse-dot green"></span> Online
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                            <!-- Username -->
-                            <div>
-                                <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">New Username</label>
-                                <div style="display:flex;gap:8px;">
-                                    <input type="text" id="settings-username-input" placeholder="Enter new username..." style="flex:1;min-width:0;">
-                                    <button class="btn btn-purple" style="padding:10px 14px;white-space:nowrap;" onclick="updateUsername()">
-                                        <i data-lucide="check" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                        <div class="identity-inputs">
+                            <div class="form-group">
+                                <label class="form-label">New Username</label>
+                                <div class="input-row">
+                                    <input type="text" id="settings-username-input" placeholder="Enter new username...">
+                                    <button class="btn btn-primary btn-square" onclick="updateUsername()">
+                                        <i data-lucide="check" style="width:16px;height:16px;"></i>
                                     </button>
                                 </div>
-                                <div id="settings-username-status" style="font-size:0.75rem;margin-top:6px;min-height:18px;"></div>
+                                <div id="settings-username-status" class="form-status"></div>
                             </div>
-                            <!-- Avatar URL -->
-                            <div>
-                                <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Avatar Image URL</label>
-                                <div style="display:flex;gap:8px;">
-                                    <input type="text" id="settings-avatar-input" placeholder="https://i.imgur.com/..." style="flex:1;min-width:0;">
-                                    <button class="btn btn-purple" style="padding:10px 14px;white-space:nowrap;" onclick="updateAvatar()">
-                                        <i data-lucide="check" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label class="form-label">Avatar Image URL</label>
+                                <div class="input-row">
+                                    <input type="text" id="settings-avatar-input" placeholder="https://i.imgur.com/...">
+                                    <button class="btn btn-primary btn-square" onclick="updateAvatar()">
+                                        <i data-lucide="check" style="width:16px;height:16px;"></i>
                                     </button>
                                 </div>
-                                <div id="settings-avatar-status" style="font-size:0.75rem;margin-top:6px;min-height:18px;"></div>
+                                <div id="settings-avatar-status" class="form-status"></div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Bot Presence -->
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:#2b2d31;display:flex;align-items:center;justify-content:center;color:#22d3ee;">
-                                <i data-lucide="circle-dot" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                    <div class="card-glass">
+                        <div class="card-glass-header">
+                            <div class="settings-section-icon" style="background:rgba(34,211,238,0.1); color:#22d3ee;">
+                                <i data-lucide="radio" style="width:18px;height:18px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:700;font-size:0.9rem;color:#e2e8f0;">Bot Presence</div>
-                                <div style="font-size:0.75rem;color:#64748b;">Set online status and activity</div>
+                                <div class="card-glass-title">Bot Presence</div>
+                                <div class="card-glass-sub">Set online status and activity</div>
                             </div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                            <!-- Status -->
-                            <div>
-                                <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Online Status</label>
-                                <div style="position:relative;">
-                                    <select id="settings-status" style="width:100%;padding-right:36px;">
-                                        <option value="online">🟢 Online</option>
-                                        <option value="idle">🟡 Idle</option>
-                                        <option value="dnd">🔴 Do Not Disturb</option>
-                                        <option value="invisible">⚫ Invisible</option>
-                                    </select>
-                                    <i data-lucide="chevron-down" class="" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#64748b;pointer-events:none;font-size:0.75rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                                </div>
+
+                        <div class="settings-grid-2" style="margin-bottom:16px;">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Online Status</label>
+                                <div id="settings-status-container"></div>
                             </div>
-                            <!-- Activity Type -->
-                            <div>
-                                <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Activity Type</label>
-                                <div style="position:relative;">
-                                    <select id="settings-activity-type" style="width:100%;padding-right:36px;">
-                                        <option value="PLAYING">🎮 Playing</option>
-                                        <option value="WATCHING">📺 Watching</option>
-                                        <option value="LISTENING">🎵 Listening to</option>
-                                        <option value="COMPETING">🏆 Competing in</option>
-                                    </select>
-                                    <i data-lucide="chevron-down" class="" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#64748b;pointer-events:none;font-size:0.75rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                                </div>
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Activity Type</label>
+                                <div id="settings-activity-container"></div>
                             </div>
                         </div>
-                        <div style="margin-bottom:16px;">
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Activity Text <span style="font-weight:400;text-transform:none;">(leave empty to clear)</span></label>
-                            <input type="text" id="settings-activity-text" placeholder="e.g. with your server..." style="width:100%;">
+
+                        <div class="form-group">
+                            <label class="form-label">Activity Text <span class="label-note">(leave empty to clear)</span></label>
+                            <input type="text" id="settings-activity-text" placeholder="e.g. with your server...">
                         </div>
-                        <button class="btn btn-cyan" onclick="savePresence()" style="background:#2b2d31;color:#0f1117;">
-                            <i data-lucide="save" class="" style="width:1em;height:1em;display:inline-block;"></i> Apply Presence
-                        </button>
-                        <span id="settings-presence-status" style="font-size:0.8rem;color:#64748b;margin-left:12px;"></span>
+
+                        <div class="status-bar">
+                            <button class="btn btn-primary" onclick="savePresence()">
+                                <i data-lucide="save" style="width:16px;height:16px;"></i> Apply Presence
+                            </button>
+                            <span id="settings-presence-status"></span>
+                        </div>
                     </div>
 
                     <!-- Voice Settings -->
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:#2b2d31;display:flex;align-items:center;justify-content:center;color:#34d399;">
-                                <i data-lucide="headphones" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                    <div class="card-glass">
+                        <div class="card-glass-header">
+                            <div class="settings-section-icon" style="background:rgba(52,211,153,0.1); color:#34d399;">
+                                <i data-lucide="headphones" style="width:18px;height:18px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:700;font-size:0.9rem;color:#e2e8f0;">Voice Settings</div>
-                                <div style="font-size:0.75rem;color:#64748b;">Configure default voice channel and behavior</div>
+                                <div class="card-glass-title">Voice Settings</div>
+                                <div class="card-glass-sub">Configure default voice channel and behavior</div>
                             </div>
                         </div>
-                        <div style="display:flex;flex-direction:column;gap:14px;">
-                            <div>
-                                <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Default Voice Channel</label>
-                                <div style="position:relative;">
-                                    <select id="settings-default-channel" style="width:100%;padding-right:36px;">
-                                        <option value="">-- Select Channel --</option>
-                                    </select>
-                                    <i data-lucide="chevron-down" class="" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#64748b;pointer-events:none;font-size:0.75rem;" style="width:1em;height:1em;display:inline-block;"></i>
-                                </div>
-                                <div style="font-size:0.72rem;color:#475569;margin-top:5px;">Bot will join this channel on connect/reconnect</div>
+
+                        <div class="settings-stack">
+                            <div class="form-group" style="margin:0;">
+                                <label class="form-label">Default Voice Channel</label>
+                                <div id="settings-channel-container"></div>
+                                <div class="form-hint">Bot will join this channel on connect/reconnect</div>
                             </div>
-                            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(0,0,0,0.2);border-radius:10px;border:1px solid rgba(255,255,255,0.06);">
+                            <div class="toggle-row">
                                 <div>
-                                    <div style="font-size:0.875rem;font-weight:600;color:#e2e8f0;">Auto-join on Start</div>
-                                    <div style="font-size:0.72rem;color:#64748b;margin-top:2px;">Automatically join voice when bot starts</div>
+                                    <div class="toggle-row-label">Auto-join on Start</div>
+                                    <div class="toggle-row-sub">Automatically join voice when bot starts</div>
                                 </div>
-                                <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer;">
-                                    <input type="checkbox" id="settings-auto-join" style="opacity:0;width:0;height:0;position:absolute;">
-                                    <span id="toggle-auto-join" onclick="toggleSetting('auto-join')" style="position:absolute;inset:0;border-radius:99px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);transition:all 0.2s;cursor:pointer;">
-                                        <span style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#64748b;transition:all 0.2s;" id="toggle-auto-join-knob"></span>
-                                    </span>
+                                <label class="toggle">
+                                    <input type="checkbox" id="settings-auto-join">
+                                    <span class="toggle-track"><span class="toggle-knob"></span></span>
                                 </label>
                             </div>
                         </div>
-                        <div style="margin-top:16px;">
-                            <button class="btn btn-green" onclick="saveVoiceSettings()">
-                                <i data-lucide="save" class="" style="width:1em;height:1em;display:inline-block;"></i> Save Voice Settings
+
+                        <div class="status-bar">
+                            <button class="btn btn-green btn-sm" onclick="saveVoiceSettings()">
+                                <i data-lucide="save" style="width:14px;height:14px;"></i> Save
                             </button>
-                            <span id="settings-voice-status" style="font-size:0.8rem;color:#64748b;margin-left:12px;"></span>
+                            <span id="settings-voice-status"></span>
                         </div>
                     </div>
 
                     <!-- Panel Settings -->
-                    <div class="glass" style="padding:24px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:#2b2d31;display:flex;align-items:center;justify-content:center;color:#60a5fa;">
-                                <i data-lucide="palette" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                    <div class="card-glass">
+                        <div class="card-glass-header">
+                            <div class="settings-section-icon" style="background:rgba(96,165,250,0.1); color:#60a5fa;">
+                                <i data-lucide="palette" style="width:18px;height:18px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:700;font-size:0.9rem;color:#e2e8f0;">Panel Settings</div>
-                                <div style="font-size:0.75rem;color:#64748b;">Customize the control panel</div>
+                                <div class="card-glass-title">Panel Settings</div>
+                                <div class="card-glass-sub">Customize the control panel</div>
                             </div>
                         </div>
-                        <div style="margin-bottom:16px;">
-                            <label style="font-size:0.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:6px;">Panel Title</label>
-                            <input type="text" id="settings-panel-title" placeholder="Deltalitehub Bot Panel" style="width:100%;">
-                            <div style="font-size:0.72rem;color:#475569;margin-top:5px;">Shown in browser tab title</div>
+
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label">Panel Title</label>
+                            <input type="text" id="settings-panel-title" placeholder="Nexus Bot Panel">
+                            <div class="form-hint">Shown in browser tab title</div>
                         </div>
-                        <button class="btn btn-blue" onclick="savePanelSettings()">
-                            <i data-lucide="save" class="" style="width:1em;height:1em;display:inline-block;"></i> Save Panel Settings
-                        </button>
-                        <span id="settings-panel-status" style="font-size:0.8rem;color:#64748b;margin-left:12px;"></span>
+
+                        <div class="status-bar">
+                            <button class="btn btn-blue btn-sm" onclick="savePanelSettings()">
+                                <i data-lucide="save" style="width:14px;height:14px;"></i> Save
+                            </button>
+                            <span id="settings-panel-status"></span>
+                        </div>
                     </div>
 
                     <!-- Danger Zone -->
-                    <div style="background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:24px;">
-                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-                            <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;color:#f87171;">
-                                <i data-lucide="alert-triangle" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                    <div class="danger-zone">
+                        <div class="danger-zone-header">
+                            <div class="settings-section-icon" style="background:rgba(239,68,68,0.15);color:#f87171;">
+                                <i data-lucide="alert-triangle" style="width:18px;height:18px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:700;font-size:0.9rem;color:#fca5a5;">Danger Zone</div>
-                                <div style="font-size:0.75rem;color:#64748b;">Irreversible actions</div>
+                                <div class="danger-zone-title">Danger Zone</div>
+                                <div class="card-glass-sub" style="color:var(--ink-muted);">Irreversible actions</div>
                             </div>
                         </div>
-                        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                        <div class="danger-zone-actions">
                             <button class="btn btn-red" onclick="clearChatHistory()">
-                                <i data-lucide="trash-2" class="" style="width:1em;height:1em;display:inline-block;"></i> Clear All Chat History
+                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear All Chat History
                             </button>
                         </div>
                     </div>
 
+                    <div class="settings-spacer"></div>
+
                 </div>
             </div>
 
-        </div><!-- /content padding -->
+        </div>
     </main>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <!-- Move Modal -->
     <div id="move-modal">
         <div class="modal-box">
             <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-                <div style="width:40px; height:40px; border-radius:12px; background:#2b2d31; display:flex; align-items:center; justify-content:center; color:white; font-size:1rem; flex-shrink:0;">
-                    <i data-lucide="arrow-left-right" class="" style="width:1em;height:1em;display:inline-block;"></i>
+                <div class="settings-section-icon" style="background:var(--surface-1);">
+                    <i data-lucide="move" style="width:18px;height:18px;"></i>
                 </div>
                 <div>
-                    <div style="font-size:1rem; font-weight:700; color:#e2e8f0;">Move <span id="move-target-name">...</span></div>
-                    <div style="font-size:0.75rem; color:#64748b;">Select destination channel</div>
+                    <div style="font-size:1rem; font-weight:700; color:var(--ink);" id="modal-title">Move <span id="move-target-name">...</span></div>
+                    <div style="font-size:0.75rem; color:var(--ink-muted);">Select destination channel</div>
                 </div>
             </div>
-            <div style="position:relative; margin-bottom:20px;">
-                <select id="channel-dropdown" style="width:100%; padding-right:36px;"></select>
-                <i data-lucide="chevron-down" class="" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#64748b; pointer-events:none; font-size:0.75rem;" style="width:1em;height:1em;display:inline-block;"></i>
-            </div>
+            <div id="modal-channel-container" style="margin-bottom:20px;"></div>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn btn-ghost" onclick="closeMoveModal()">Cancel</button>
-                <button class="btn btn-purple" onclick="confirmMove()">
-                    <i data-lucide="check" class="" style="width:1em;height:1em;display:inline-block;"></i> Confirm Move
+                <button class="btn btn-primary" id="modal-confirm-btn" onclick="confirmMove()">
+                    <i data-lucide="check" style="width:14px;height:14px;"></i> Confirm Move
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="/js/app.js"></script>
+    <script src="/js/icons.js"></script>
+    <script src="/js/socket.js"></script>
+    <script src="/js/dropdown.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/voice.js"></script>
+    <script src="/js/dm.js"></script>
+    <script src="/js/announce.js"></script>
+    <script src="/js/logs.js"></script>
+    <script src="/js/settings.js"></script>
+    <script src="/js/emoji.js"></script>
+    <script src="/js/modal.js"></script>
     <script>
-        const socket = io();
-        let cachedVoiceChannels = [];
-        let currentMoveTarget = null;
-        let currentChatUser = null;
-        let currentChatUserName = '';
-        let currentChatUserAvatar = '';
-        let userDropdownPopulated = false;
-        let dashboardReceived = false;
-        let currentTab = 'dashboard';
-
-        // ===== TAB SWITCHING =====
-        const tabTitles = { dashboard: 'Dashboard', voice: 'Voice Control', dm: 'DM Chat', announce: 'Announce', logs: 'Activity Log', settings: 'Settings' };
-        function switchTab(tab) {
-            currentTab = tab;
-            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('tab-' + tab).classList.add('active');
-            document.getElementById('nav-' + tab).classList.add('active');
-            document.getElementById('page-title').textContent = tabTitles[tab] || tab;
-            if (tab === 'logs') {
-                document.getElementById('log-badge').style.display = 'none';
-                socket.emit('get_logs');
-            }
-            if (tab === 'settings') {
-                socket.emit('get_settings');
-            }
-        }
-
-        // ===== REST FALLBACK =====
-        function tryRestFallback() {
-            if (dashboardReceived) return;
-            console.warn('Socket not yet sending data, trying REST fallback...');
-            fetch('/api/dashboard')
-                .then(r => r.json())
-                .then(data => {
-                    if (data && !data.error) {
-                        dashboardReceived = true;
-                        updateDashboard(data);
-                    } else {
-                        setTimeout(tryRestFallback, 3000);
-                    }
-                })
-                .catch(() => setTimeout(tryRestFallback, 3000));
-        }
         setTimeout(tryRestFallback, 5000);
-
-        // ===== SOCKET EVENTS =====
-        socket.on('connect', () => {
-            setConnectionStatus(true);
-        });
-        socket.on('disconnect', () => {
-            setConnectionStatus(false);
-        });
-        socket.on('connect_error', (err) => {
-            if (err.message === 'Unauthorized') {
-                window.location.href = '/login';
-            }
-        });
-        socket.on('bot_status', ({ ready, message }) => {
-            if (!ready) {
-                document.getElementById('server-name').textContent = message || 'Bot connecting...';
-                document.getElementById('sidebar-status-text').textContent = 'Connecting...';
-            }
-        });
-        socket.on('dashboard_update', (data) => {
-            if (!data) return;
-            dashboardReceived = true;
-            updateDashboard(data);
-        });
-
-        function setConnectionStatus(connected) {
-            const pill = document.getElementById('connection-status');
-            const dot = document.getElementById('conn-dot');
-            const text = document.getElementById('conn-text');
-            const sidebarDot = document.getElementById('sidebar-dot');
-            const sidebarText = document.getElementById('sidebar-status-text');
-            if (connected) {
-                pill.style.background = 'rgba(16,185,129,0.12)';
-                pill.style.color = '#34d399';
-                pill.style.borderColor = 'rgba(16,185,129,0.25)';
-                dot.className = 'pulse-dot green';
-                text.textContent = 'Live';
-                sidebarDot.className = 'pulse-dot green';
-                sidebarText.textContent = 'Online';
-            } else {
-                pill.style.background = 'rgba(239,68,68,0.12)';
-                pill.style.color = '#f87171';
-                pill.style.borderColor = 'rgba(239,68,68,0.25)';
-                dot.className = 'pulse-dot red';
-                text.textContent = 'Disconnected';
-                sidebarDot.className = 'pulse-dot red';
-                sidebarText.textContent = 'Offline';
-            }
+        refreshIcons();
+        function toggleSidebar() {
+            const s = document.getElementById('sidebar');
+            const o = document.getElementById('sidebar-overlay');
+            const isOpen = s.classList.toggle('open');
+            o.style.display = isOpen ? 'block' : 'none';
         }
-
-        // ===== DASHBOARD UPDATE =====
-        function updateDashboard(data) {
-            if (data.server) {
-                document.getElementById('server-name').textContent = data.server.name;
-                document.getElementById('server-members').textContent = data.server.memberCount;
-                const icon = document.getElementById('server-icon');
-                if (data.server.icon) icon.src = data.server.icon;
-            }
-
-            document.getElementById('stat-ping').textContent = data.stats.ping + ' ms';
-            document.getElementById('stat-uptime').textContent = data.stats.uptime + ' min';
-            document.getElementById('stat-guilds').textContent = data.stats.guilds;
-            document.getElementById('stat-users').textContent = data.stats.users;
-
-            // Voice status
-            const isConnected = data.voice.status === 'Connected';
-            const vStatus = document.getElementById('voice-status');
-            const vBadge = document.getElementById('voice-status-badge');
-            const vNameVoice = document.getElementById('voice-channel-name-voice');
-            if (isConnected) {
-                vStatus.innerHTML = '<i data-lucide="volume-2" class="" style="color:#a78bfa; margin-right:8px;" style="width:1em;height:1em;display:inline-block;"></i>' + data.voice.channelName;
-                vBadge.innerHTML = '<span class="badge badge-green"><span class="pulse-dot green" style="width:6px;height:6px;"></span> Connected</span>';
-                if (vNameVoice) vNameVoice.textContent = data.voice.channelName;
-            } else {
-                vStatus.innerHTML = '<i data-lucide="volume-x" class="" style="color:#f87171; margin-right:8px;" style="width:1em;height:1em;display:inline-block;"></i>Not connected';
-                vBadge.innerHTML = '<span class="badge badge-red">Disconnected</span>';
-                if (vNameVoice) vNameVoice.textContent = 'Not connected';
-            }
-
-            cachedVoiceChannels = data.voiceChannels;
-
-            // Member count badge
-            const memberCountBadge = document.getElementById('voice-member-count');
-            if (memberCountBadge) memberCountBadge.textContent = data.members.length + ' member' + (data.members.length !== 1 ? 's' : '');
-
-            // Render members
-            renderMembers(data.members);
-
-            renderDMUsers(data.allServerUsers);
-            // Populate user dropdown (once)
-            if (!userDropdownPopulated && data.allServerUsers && data.allServerUsers.length > 0) {
-                const select = document.getElementById('chat-user-select');
-                select.innerHTML = '<option value="">-- Select User --</option>' +
-                    data.allServerUsers.map(u => '<option value="' + u.id + '">' + escHtml(u.username) + '</option>').join('');
-                userDropdownPopulated = true;
-            }
-
-            // Populate text channels for announce (once)
-            if (data.textChannels) {
-                const sel = document.getElementById('announce-channel-select');
-                if (sel && sel.options.length <= 1) {
-                    sel.innerHTML = '<option value="">-- Select Channel --</option>' +
-                        data.textChannels.map(c => '<option value="' + c.id + '">#' + escHtml(c.name) + '</option>').join('');
-                }
-            }
-
-            // Populate voice channels for settings default channel
-            if (data.voiceChannels) {
-                const sel = document.getElementById('settings-default-channel');
-                if (sel && sel.options.length <= 1) {
-                    sel.innerHTML = '<option value="">-- Select Channel --</option>' +
-                        data.voiceChannels.map(c => '<option value="' + c.id + '">🔊 ' + escHtml(c.name) + '</option>').join('');
-                    if (data.settings && data.settings.defaultChannelId) {
-                        sel.value = data.settings.defaultChannelId;
-                    }
-                }
-            }
-
-            // Update settings bot preview if on settings tab
-            if (data.botInfo) {
-                const avatarEl = document.getElementById('settings-bot-avatar');
-                const nameEl = document.getElementById('settings-bot-username');
-                if (avatarEl) avatarEl.src = data.botInfo.avatar;
-                if (nameEl) nameEl.textContent = data.botInfo.username;
-            }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').style.display = 'none';
         }
-
-        function renderMembers(members) {
-            const list = document.getElementById('members-list');
-            if (!members || members.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:48px 20px; color:#475569;"><i data-lucide="ghost" class="" style="font-size:2rem; margin-bottom:12px; display:block; opacity:0.4;" style="width:1em;height:1em;display:inline-block;"></i><p style="font-style:italic;">Channel is empty</p></div>';
-                return;
-            }
-            list.innerHTML = members.map(m => {
-                const mutedClass = m.isMuted ? 'btn-red' : 'btn-ghost';
-                const deafClass = m.isDeaf ? 'btn-red' : 'btn-ghost';
-                return '<div class="member-card" data-member-id="' + m.id + '" data-muted="' + m.isMuted + '" data-deaf="' + m.isDeaf + '">' +
-                    '<div style="display:flex; align-items:center; gap:12px; min-width:0;">' +
-                        '<div class="avatar-ring" style="flex-shrink:0;">' +
-                            '<img src="' + m.avatar + '" alt="' + escHtml(m.username) + '" style="width:38px;height:38px;" onerror="this.src=\'https://cdn.discordapp.com/embed/avatars/0.png\'">' +
-                        '</div>' +
-                        '<div style="min-width:0;">' +
-                            '<div style="font-weight:700; font-size:0.875rem; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' +
-                                escHtml(m.username) +
-                                (m.isBot ? ' <span style="font-size:0.6rem; background:#6366f1; color:white; padding:2px 6px; border-radius:4px; font-weight:700; vertical-align:middle;">BOT</span>' : '') +
-                            '</div>' +
-                            '<div style="display:flex; gap:6px; margin-top:4px;">' +
-                                '<span data-badge="muted" class="badge badge-red" style="font-size:0.6rem; padding:1px 6px; display:' + (m.isMuted ? 'inline-flex' : 'none') + ';"><i data-lucide="mic-off" class="" style="width:1em;height:1em;display:inline-block;"></i>&nbsp;Muted</span>' +
-                                '<span data-badge="deafened" class="badge badge-red" style="font-size:0.6rem; padding:1px 6px; display:' + (m.isDeaf ? 'inline-flex' : 'none') + ';"><i data-lucide="headphones" class="" style="width:1em;height:1em;display:inline-block;"></i>&nbsp;Deafened</span>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div style="display:flex; gap:6px; flex-shrink:0;">' +
-                        '<button class="btn btn-icon ' + mutedClass + '" data-action="mute" onclick="memberAction(\'' + m.id + '\', \'mute\')" title="' + (m.isMuted ? 'Unmute' : 'Mute') + '">' +
-                            '<i data-lucide="circle" class="" style="width:1em;height:1em;display:inline-block;"></i>' +
-                        '</button>' +
-                        '<button class="btn btn-icon ' + deafClass + '" data-action="deafen" onclick="memberAction(\'' + m.id + '\', \'deafen\')" title="' + (m.isDeaf ? 'Undeafen' : 'Deafen') + '">' +
-                            '<i data-lucide="circle" class="" style="width:1em;height:1em;display:inline-block;"></i>' +
-                        '</button>' +
-                        '<button class="btn btn-icon btn-blue" onclick="openMoveModal(\'' + m.id + '\', \'' + escHtml(m.username).replace(/'/g, "\\'") + '\')" title="Move">' +
-                            '<i data-lucide="arrow-left-right" class="" style="width:1em;height:1em;display:inline-block;"></i>' +
-                        '</button>' +
-                        '<button class="btn btn-icon btn-red" onclick="memberAction(\'' + m.id + '\', \'kick\')" title="Kick from voice">' +
-                            '<i data-lucide="phone-off" class="" style="width:1em;height:1em;display:inline-block;"></i>' +
-                        '</button>' +
-                    '</div>' +
-                '</div>';
-            }).join('');
-        }
-
-        function escHtml(str) {
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        // ===== DM CHAT =====
-        socket.on('dm_history', ({ userId, messages }) => {
-            if (userId !== currentChatUser) return;
-            renderMessages(messages);
-        });
-
-        socket.on('dm_received', ({ userId, message, username }) => {
-            if (userId === currentChatUser) {
-                appendMessage(message);
-            } else {
-                // Show badge on DM nav
-                document.getElementById('dm-badge').style.display = 'inline-flex';
-            }
-        });
-
-        socket.on('dm_error', (err) => {
-            alert(err);
-        });
-
-        function sendChat() {
-            const input = document.getElementById('chat-input');
-            const msg = input.value.trim();
-            if (!msg || !currentChatUser) return;
-            const payload = { userId: currentChatUser, message: msg };
-            if (replyState) payload.replyTo = replyState;
-            socket.emit('send_dm', payload);
-            input.value = '';
-            cancelReply();
-        }
-
-        document.getElementById('chat-input').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') sendChat();
-        });
-
-        function renderMessages(messages) {
-            const container = document.getElementById('chat-messages');
-            if (!messages || messages.length === 0) {
-                container.innerHTML = '<div data-placeholder style="display:flex;align-items:center;justify-content:center;height:100%;color:#949ba4;font-style:italic;font-size:0.875rem;text-align:center;padding:20px;"><div><i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 8px;display:block;opacity:0.3;"></i>No messages yet</div></div>';
-                refreshIcons();
-                return;
-            }
-            container.innerHTML = '';
-            let prevSender = null, prevTime = null;
-            messages.forEach((m, i) => {
-                const currTime = new Date(m.time);
-                const sameGroup = prevSender === m.sender && prevTime && (currTime - prevTime) < 5 * 60 * 1000;
-                appendMessage(m, false, sameGroup);
-                prevSender = m.sender;
-                prevTime = currTime;
-            });
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // replyState holds { sender, text, msgId }
-        let replyState = null;
-
-        function appendMessage(m, scrollToBottom = true, grouped = false) {
-            const container = document.getElementById('chat-messages');
-            const placeholder = container.querySelector('[data-placeholder]');
-            if (placeholder) placeholder.remove();
-
-            const isBot = m.sender === 'bot';
-            const timeStr = new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const fullTime = new Date(m.time).toLocaleString();
-            const msgId = 'msg-' + m.time + '-' + Math.random().toString(36).slice(2,6);
-
-            // Avatar src
-            const avatarSrc = isBot
-                ? (document.getElementById('settings-bot-avatar')?.src || 'https://cdn.discordapp.com/embed/avatars/0.png')
-                : (currentChatUserAvatar || 'https://cdn.discordapp.com/embed/avatars/0.png');
-            const displayName = isBot ? (document.getElementById('settings-bot-username')?.textContent || 'Bot') : currentChatUserName;
-
-            const wrapper = document.createElement('div');
-            wrapper.id = msgId;
-            wrapper.className = 'msg-wrapper';
-            wrapper.style.cssText = 'display:flex;align-items:flex-start;gap:16px;padding:2px 16px;border-radius:4px;position:relative;';
-            wrapper.onmouseenter = function() {
-                this.style.background = 'rgba(0,0,0,0.06)';
-                const actions = this.querySelector('.msg-actions');
-                if (actions) actions.style.display = 'flex';
-            };
-            wrapper.onmouseleave = function() {
-                this.style.background = 'transparent';
-                const actions = this.querySelector('.msg-actions');
-                if (actions) actions.style.display = 'none';
-            };
-
-            // Reply quote
-            let replyHTML = '';
-            if (m.replyTo) {
-                replyHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:0.78rem;color:#949ba4;cursor:pointer;" onclick="scrollToMsg('${m.replyTo.msgId}')">
-                    <div style="width:2px;height:100%;background:#949ba4;border-radius:1px;align-self:stretch;min-height:14px;"></div>
-                    <img src="${escHtml(m.replyTo.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png')}" style="width:16px;height:16px;border-radius:50%;">
-                    <span style="color:#dbdee1;font-weight:600;">${escHtml(m.replyTo.name)}</span>
-                    <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;">${escHtml(m.replyTo.text)}</span>
-                </div>`;
-            }
-
-            if (grouped) {
-                // Compact grouped message — no avatar, just timestamp on hover
-                wrapper.style.paddingLeft = '72px';
-                wrapper.innerHTML = `
-                    <div style="flex:1;min-width:0;">
-                        ${replyHTML}
-                        <div style="display:flex;align-items:baseline;gap:8px;">
-                            <span class="msg-hover-time" style="display:none;font-size:0.65rem;color:#949ba4;width:40px;text-align:right;flex-shrink:0;">${timeStr}</span>
-                            <span style="font-size:0.9375rem;color:#dcddde;line-height:1.375;word-break:break-word;">${escHtml(m.text)}</span>
-                        </div>
-                    </div>
-                    <div class="msg-actions" style="display:none;position:absolute;right:16px;top:-14px;background:#2b2d31;border:1px solid #1e1f22;border-radius:6px;gap:2px;padding:3px;">
-                        <button onclick="startReply('${msgId}','${escHtml(displayName).replace(/'/g,"\\'")}','${escHtml(m.text).replace(/'/g,"\\'")}','${escHtml(avatarSrc).replace(/'/g,"\\'")}','${msgId}')" title="Reply" style="background:none;border:none;color:#949ba4;cursor:pointer;padding:4px 6px;border-radius:4px;font-size:0.8rem;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">↩</button>
-                    </div>`;
-                wrapper.onmouseenter = function() {
-                    this.style.background = 'rgba(0,0,0,0.06)';
-                    const t = this.querySelector('.msg-hover-time');
-                    if (t) t.style.display = 'block';
-                    const a = this.querySelector('.msg-actions');
-                    if (a) a.style.display = 'flex';
-                };
-                wrapper.onmouseleave = function() {
-                    this.style.background = 'transparent';
-                    const t = this.querySelector('.msg-hover-time');
-                    if (t) t.style.display = 'none';
-                    const a = this.querySelector('.msg-actions');
-                    if (a) a.style.display = 'none';
-                };
-            } else {
-                // Full message with avatar
-                wrapper.style.paddingTop = '8px';
-                wrapper.innerHTML = `
-                    <img src="${escHtml(avatarSrc)}" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;margin-top:2px;">
-                    <div style="flex:1;min-width:0;">
-                        ${replyHTML}
-                        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
-                            <span style="font-size:0.9375rem;font-weight:600;color:${isBot ? '#5865f2' : '#dbdee1'};">${escHtml(displayName)}</span>
-                            <span title="${fullTime}" style="font-size:0.65rem;color:#949ba4;">${timeStr}</span>
-                        </div>
-                        <div style="font-size:0.9375rem;color:#dcddde;line-height:1.375;word-break:break-word;">${escHtml(m.text)}</div>
-                    </div>
-                    <div class="msg-actions" style="display:none;position:absolute;right:16px;top:4px;background:#2b2d31;border:1px solid #1e1f22;border-radius:6px;gap:2px;padding:3px;">
-                        <button onclick="startReply('${msgId}','${escHtml(displayName).replace(/'/g,"\\'")}','${escHtml(m.text).replace(/'/g,"\\'")}','${escHtml(avatarSrc).replace(/'/g,"\\'")}','${msgId}')" title="Reply" style="background:none;border:none;color:#949ba4;cursor:pointer;padding:4px 6px;border-radius:4px;font-size:0.8rem;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">↩ Reply</button>
-                    </div>`;
-            }
-
-            container.appendChild(wrapper);
-            if (scrollToBottom) container.scrollTop = container.scrollHeight;
-            refreshIcons();
-        }
-
-        // ===== REPLY SYSTEM =====
-        function startReply(msgId, name, text, avatar, targetId) {
-            replyState = { msgId: targetId, name, text, avatar };
-            const bar = document.getElementById('reply-bar');
-            bar.style.display = 'flex';
-            document.getElementById('reply-to-name').textContent = name;
-            document.getElementById('reply-preview').textContent = text.substring(0, 80) + (text.length > 80 ? '...' : '');
-            document.getElementById('chat-input').focus();
-            refreshIcons();
-        }
-
-        function cancelReply() {
-            replyState = null;
-            document.getElementById('reply-bar').style.display = 'none';
-        }
-
-        function scrollToMsg(msgId) {
-            const el = document.getElementById(msgId);
-            if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.style.background = 'rgba(88,101,242,0.15)'; setTimeout(() => el.style.background = 'transparent', 1500); }
-        }
-
-        // ===== EMOJI PICKER =====
-        const emojiCategories = {
-            smileys: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','🙃','😉','😊','😇','🥰','😍','🤩','😘','😗','😚','😙','🥲','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','😎','🤓','🧐'],
-            gestures: ['👋','🤚','🖐','✋','🖖','👌','🤌','🤏','✌','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍','💅','🤳','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🫀','🫁','🧠','🦷','🦴','👀','👁','👅','👄'],
-            hearts: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🉑','☢️','☣️','📴','📳'],
-            objects: ['🎮','🕹','🎲','🎯','🎳','🎰','🎪','🎭','🎨','🖼','🎬','🎤','🎧','🎼','🎵','🎶','🎷','🎸','🎹','🎺','🎻','🥁','🪘','📱','💻','🖥','🖨','⌨️','🖱','🖲','💾','💿','📀','📷','📸','📹','🎥','📽','🎞','📞','☎️','📟','📠','📺','📻','🧭','⏱','⏲','⏰','🕰','⌚','⏳','⌛'],
-            symbols: ['🔥','💥','✨','🌟','⭐','🌈','☀️','🌤','⛅','🌥','☁️','🌦','🌧','⛈','🌩','🌨','❄️','☃️','⛄','🌬','💨','🌪','🌫','🌊','💧','💦','☔','⚡','🌀','🌈','🎆','🎇','🧨','✅','❎','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪','🟤','🔶','🔷','🔸','🔹','🔺','🔻','💠','🔘','🔲','🔳']
-        };
-        let currentEmojiCat = 'smileys';
-
-        function setEmojiCategory(cat) {
-            currentEmojiCat = cat;
-            document.querySelectorAll('.emoji-cat-btn').forEach(b => {
-                b.style.background = 'none'; b.style.color = '#949ba4';
-            });
-            const active = document.getElementById('ecat-' + cat);
-            if (active) { active.style.background = 'rgba(255,255,255,0.1)'; active.style.color = '#dbdee1'; }
-            renderEmojiGrid();
-        }
-
-        function renderEmojiGrid() {
-            const grid = document.getElementById('emoji-grid');
-            if (!grid) return;
-            grid.innerHTML = (emojiCategories[currentEmojiCat] || []).map(e =>
-                `<button onclick="insertEmoji('${e}')" style="background:none;border:none;cursor:pointer;font-size:1.3rem;padding:4px;border-radius:4px;line-height:1;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">${e}</button>`
-            ).join('');
-        }
-
-        function toggleEmojiPicker(e) {
-            if (e) e.stopPropagation();
-            const picker = document.getElementById('emoji-picker');
-            const isOpen = picker.style.display !== 'none';
-            picker.style.display = isOpen ? 'none' : 'block';
-            if (!isOpen) renderEmojiGrid();
-        }
-
-        function insertEmoji(emoji) {
-            const input = document.getElementById('chat-input');
-            const pos = input.selectionStart;
-            const val = input.value;
-            input.value = val.slice(0, pos) + emoji + val.slice(pos);
-            input.selectionStart = input.selectionEnd = pos + emoji.length;
-            input.focus();
-        }
-
-        // Close emoji picker on outside click
-        document.addEventListener('click', (e) => {
-            const picker = document.getElementById('emoji-picker');
-            const btn = document.getElementById('emoji-btn');
-            if (picker && btn && !picker.contains(e.target) && !btn.contains(e.target)) {
-                picker.style.display = 'none';
-            }
-        });
-
-        // ===== BOT & MEMBER ACTIONS =====
-        // ===== BULK ACTIONS =====
-        function bulkAction(action) { socket.emit('bulk_action', { action }); }
-        function confirmKickAll() {
-            if (confirm('Kick ALL members from voice channel? This cannot be undone.')) bulkAction('kick_all');
-        }
-
-        // ===== ANNOUNCE =====
-        function sendAnnounce() {
-            const channelId = document.getElementById('announce-channel-select').value;
-            const message = document.getElementById('announce-message').value.trim();
-            const status = document.getElementById('announce-status');
-            if (!channelId) return setStatus(status, 'Please select a channel', '#f87171');
-            if (!message) return setStatus(status, 'Message cannot be empty', '#f87171');
-            socket.emit('announce', { channelId, message });
-            setStatus(status, 'Sending...', '#64748b');
-        }
-        socket.on('announce_success', (msg) => {
-            setStatus(document.getElementById('announce-status'), '✓ ' + msg, '#34d399');
-            document.getElementById('announce-message').value = '';
-        });
-        socket.on('announce_error', (err) => {
-            setStatus(document.getElementById('announce-status'), '✗ ' + err, '#f87171');
-        });
-
-        // ===== BROADCAST DM =====
-        function sendBroadcast() {
-            const message = document.getElementById('broadcast-message').value.trim();
-            const status = document.getElementById('broadcast-status');
-            if (!message) return setStatus(status, 'Message cannot be empty', '#f87171');
-            socket.emit('broadcast_message', { message });
-            setStatus(status, 'Sending...', '#64748b');
-        }
-        socket.on('broadcast_result', ({ sent, failed }) => {
-            setStatus(document.getElementById('broadcast-status'), '✓ Sent to ' + sent + ' members' + (failed > 0 ? ', ' + failed + ' failed' : ''), '#34d399');
-            document.getElementById('broadcast-message').value = '';
-        });
-
-        function setStatus(el, msg, color) {
-            if (!el) return;
-            el.textContent = msg; el.style.color = color;
-            setTimeout(() => { el.textContent = ''; }, 5000);
-        }
-
-        // ===== ACTIVITY LOGS =====
-        const logColors = { system: '#6366f1', voice: '#22d3ee', moderation: '#f59e0b', message: '#34d399', settings: '#a78bfa' };
-        const logIcons  = { system: 'fa-gear', voice: 'fa-volume-high', moderation: 'fa-shield-halved', message: 'fa-envelope', settings: 'fa-sliders' };
-
-        socket.on('logs_history', (logs) => renderLogs(logs));
-        socket.on('activity_log', (entry) => {
-            prependLog(entry);
-            if (currentTab !== 'logs') document.getElementById('log-badge').style.display = 'inline-flex';
-        });
-
-        function renderLogs(logs) {
-            const list = document.getElementById('logs-list');
-            if (!logs || logs.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:40px; color:#475569; font-style:italic;">No activity yet</div>';
-                return;
-            }
-            list.innerHTML = logs.map(e => logEntryHTML(e)).join('');
-        }
-        function prependLog(entry) {
-            const list = document.getElementById('logs-list');
-            if (list.querySelector('[data-placeholder]')) list.innerHTML = '';
-            const div = document.createElement('div');
-            div.innerHTML = logEntryHTML(entry);
-            list.insertBefore(div.firstChild, list.firstChild);
-        }
-        function logEntryHTML(e) {
-            const color = logColors[e.type] || '#94a3b8';
-            const icon  = logIcons[e.type]  || 'fa-circle';
-            const time  = new Date(e.time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-            const date  = new Date(e.time).toLocaleDateString([], { month:'short', day:'numeric' });
-            return '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:10px;">' +
-                '<div style="width:28px;height:28px;border-radius:8px;background:' + color + '20;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
-                    '<i data-lucide="circle" class="" style="font-size:0.7rem;color:' + color + ';" style="width:1em;height:1em;display:inline-block;"></i>' +
-                '</div>' +
-                '<div style="flex:1;min-width:0;">' +
-                    '<div style="font-size:0.8rem;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + escHtml(e.message) + '</div>' +
-                    '<div style="font-size:0.65rem;color:#475569;margin-top:2px;text-transform:capitalize;">' + e.type + '</div>' +
-                '</div>' +
-                '<div style="font-size:0.65rem;color:#475569;text-align:right;flex-shrink:0;"><div>' + time + '</div><div>' + date + '</div></div>' +
-            '</div>';
-        }
-        function clearLogs() {
-            document.getElementById('logs-list').innerHTML = '<div data-placeholder style="text-align:center;padding:40px;color:#475569;font-style:italic;">Display cleared — new events will appear here</div>';
-        }
-
-        function botAction(action) {
-            socket.emit('bot_action', { action });
-        }
-        function memberAction(userId, action) {
-            socket.emit('member_action', { userId, action });
-
-            // Optimistic UI — langsung update visual tanpa tunggu server
-            if (action === 'mute' || action === 'deafen') {
-                const memberCard = document.querySelector('[data-member-id="' + userId + '"]');
-                if (!memberCard) return;
-
-                if (action === 'mute') {
-                    const isMuted = memberCard.dataset.muted === 'true';
-                    const newMuted = !isMuted;
-                    memberCard.dataset.muted = newMuted;
-
-                    const muteBtn = memberCard.querySelector('[data-action="mute"]');
-                    const muteBadge = memberCard.querySelector('[data-badge="muted"]');
-                    if (muteBtn) {
-                        muteBtn.className = 'btn btn-icon ' + (newMuted ? 'btn-red' : 'btn-ghost');
-                        muteBtn.innerHTML = '<i data-lucide="circle" class="" style="width:1em;height:1em;display:inline-block;"></i>';
-                        muteBtn.title = newMuted ? 'Unmute' : 'Mute';
-                    }
-                    if (muteBadge) muteBadge.style.display = newMuted ? 'inline-flex' : 'none';
-                }
-
-                if (action === 'deafen') {
-                    const isDeaf = memberCard.dataset.deaf === 'true';
-                    const newDeaf = !isDeaf;
-                    memberCard.dataset.deaf = newDeaf;
-
-                    const deafBtn = memberCard.querySelector('[data-action="deafen"]');
-                    const deafBadge = memberCard.querySelector('[data-badge="deafened"]');
-                    if (deafBtn) {
-                        deafBtn.className = 'btn btn-icon ' + (newDeaf ? 'btn-red' : 'btn-ghost');
-                        deafBtn.innerHTML = '<i data-lucide="circle" class="" style="width:1em;height:1em;display:inline-block;"></i>';
-                        deafBtn.title = newDeaf ? 'Undeafen' : 'Deafen';
-                    }
-                    if (deafBadge) deafBadge.style.display = newDeaf ? 'inline-flex' : 'none';
-                }
-            }
-        }
-
-        // ===== MOVE MODAL =====
-        function openMoveModal(target, username) {
-            currentMoveTarget = target;
-            document.getElementById('move-target-name').textContent = target === 'bot' ? 'Bot' : (username || 'User');
-            const dropdown = document.getElementById('channel-dropdown');
-            dropdown.innerHTML = cachedVoiceChannels.length
-                ? cachedVoiceChannels.map(c => '<option value="' + c.id + '">&#128266; ' + escHtml(c.name) + '</option>').join('')
-                : '<option value="">No channels found</option>';
-            document.getElementById('move-modal').classList.add('open');
-        }
-        function closeMoveModal() {
-            document.getElementById('move-modal').classList.remove('open');
-            currentMoveTarget = null;
-        }
-        function confirmMove() {
-            const channelId = document.getElementById('channel-dropdown').value;
-            if (!channelId) return alert('Please select a channel first!');
-            if (currentMoveTarget === 'bot') {
-                socket.emit('bot_action', { action: 'move_bot', targetChannelId: channelId });
-            } else {
-                socket.emit('member_action', { userId: currentMoveTarget, action: 'move', targetChannelId: channelId });
-            }
-            closeMoveModal();
-        }
-
-        // Close modal on backdrop click
-        document.getElementById('move-modal').addEventListener('click', function(e) {
-            if (e.target === this) closeMoveModal();
-        });
-
-        // ===== SETTINGS =====
-        socket.on('settings_data', ({ settings, botInfo }) => {
-            if (botInfo) {
-                document.getElementById('settings-bot-avatar').src = botInfo.avatar;
-                document.getElementById('settings-bot-username').textContent = botInfo.username;
-                document.getElementById('settings-bot-tag').textContent = botInfo.tag;
-                document.getElementById('settings-bot-id').textContent = 'ID: ' + botInfo.id;
-            }
-            if (settings) {
-                document.getElementById('settings-status').value = settings.statusType || 'online';
-                document.getElementById('settings-activity-type').value = settings.activityType || 'PLAYING';
-                document.getElementById('settings-activity-text').value = settings.activityText || '';
-                document.getElementById('settings-panel-title').value = settings.panelTitle || 'Deltalitehub Bot Panel';
-                document.getElementById('settings-auto-join').checked = settings.autoJoinOnStart !== false;
-                updateToggleUI('auto-join', settings.autoJoinOnStart !== false);
-                if (settings.defaultChannelId) {
-                    document.getElementById('settings-default-channel').value = settings.defaultChannelId;
-                }
-            }
-        });
-
-        socket.on('settings_saved', ({ success, settings }) => {
-            if (success && settings) {
-                if (settings.panelTitle) document.title = settings.panelTitle;
-            }
-        });
-
-        socket.on('settings_result', ({ key, success, message, error }) => {
-            const statusEl = document.getElementById('settings-' + key + '-status');
-            if (!statusEl) return;
-            if (success) {
-                setStatus(statusEl, '✓ ' + message, '#34d399');
-            } else {
-                setStatus(statusEl, '✗ ' + error, '#f87171');
-            }
-        });
-
-        function updateUsername() {
-            const username = document.getElementById('settings-username-input').value.trim();
-            if (!username) return;
-            socket.emit('update_bot_username', { username });
-            setStatus(document.getElementById('settings-username-status'), 'Updating...', '#64748b');
-        }
-
-        function updateAvatar() {
-            const imageUrl = document.getElementById('settings-avatar-input').value.trim();
-            if (!imageUrl) return;
-            socket.emit('update_bot_avatar', { imageUrl });
-            setStatus(document.getElementById('settings-avatar-status'), 'Updating...', '#64748b');
-        }
-
-        function savePresence() {
-            const statusType = document.getElementById('settings-status').value;
-            const activityType = document.getElementById('settings-activity-type').value;
-            const activityText = document.getElementById('settings-activity-text').value.trim();
-            socket.emit('save_settings', { statusType, activityType, activityText });
-            setStatus(document.getElementById('settings-presence-status'), 'Saving...', '#64748b');
-            setTimeout(() => setStatus(document.getElementById('settings-presence-status'), '✓ Saved', '#34d399'), 500);
-        }
-
-        function saveVoiceSettings() {
-            const defaultChannelId = document.getElementById('settings-default-channel').value;
-            const autoJoinOnStart = document.getElementById('settings-auto-join').checked;
-            socket.emit('save_settings', { defaultChannelId, autoJoinOnStart });
-            setStatus(document.getElementById('settings-voice-status'), 'Saving...', '#64748b');
-            setTimeout(() => setStatus(document.getElementById('settings-voice-status'), '✓ Saved', '#34d399'), 500);
-        }
-
-        function savePanelSettings() {
-            const panelTitle = document.getElementById('settings-panel-title').value.trim();
-            socket.emit('save_settings', { panelTitle });
-            setStatus(document.getElementById('settings-panel-status'), 'Saving...', '#64748b');
-            setTimeout(() => {
-                setStatus(document.getElementById('settings-panel-status'), '✓ Saved', '#34d399');
-                document.title = panelTitle || 'Deltalitehub Bot Panel';
-            }, 500);
-        }
-
-        function toggleSetting(key) {
-            const checkbox = document.getElementById('settings-' + key);
-            checkbox.checked = !checkbox.checked;
-            updateToggleUI(key, checkbox.checked);
-        }
-
-        function updateToggleUI(key, checked) {
-            const toggle = document.getElementById('toggle-' + key);
-            const knob = document.getElementById('toggle-' + key + '-knob');
-            if (checked) {
-                toggle.style.background = 'linear-gradient(135deg, #10b981, #34d399)';
-                toggle.style.borderColor = 'rgba(16,185,129,0.4)';
-                knob.style.left = '24px';
-                knob.style.background = 'white';
-            } else {
-                toggle.style.background = 'rgba(255,255,255,0.1)';
-                toggle.style.borderColor = 'rgba(255,255,255,0.15)';
-                knob.style.left = '3px';
-                knob.style.background = '#64748b';
-            }
-        }
-
-        function clearChatHistory() {
-            if (!confirm('Delete ALL chat history? This cannot be undone.')) return;
-            socket.emit('clear_chat_history');
-        }
-
-        // Responsive menu toggle
-        if (window.innerWidth <= 768) {
-            document.getElementById('menu-toggle').style.display = 'block';
-        }
-        window.addEventListener('resize', () => {
-            document.getElementById('menu-toggle').style.display = window.innerWidth <= 768 ? 'block' : 'none';
-        });
-    
-        // Refresh Lucide Icons
-        function refreshIcons() {
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-        }
-        setInterval(refreshIcons, 1000); // Hacky but works for dynamic content
-        setTimeout(refreshIcons, 100);
-
-        // Custom Dropdown Wrapper
-        function createCustomDropdowns() {
-            document.querySelectorAll('select').forEach(select => {
-                if (select.dataset.customized) return;
-                select.dataset.customized = 'true';
-                select.style.display = 'none'; // Hide original
-                
-                const wrapper = document.createElement('div');
-                wrapper.className = 'custom-select-wrapper';
-                select.parentNode.insertBefore(wrapper, select);
-                wrapper.appendChild(select);
-                
-                const trigger = document.createElement('div');
-                trigger.className = 'custom-select-trigger';
-                
-                const selectedText = document.createElement('span');
-                selectedText.textContent = select.options[select.selectedIndex]?.text || '-- Select --';
-                
-                const chevron = document.createElement('i');
-                chevron.setAttribute('data-lucide', 'chevron-down');
-                chevron.style.width = '1em'; chevron.style.height = '1em';
-                
-                trigger.appendChild(selectedText);
-                trigger.appendChild(chevron);
-                
-                const optionsContainer = document.createElement('div');
-                optionsContainer.className = 'custom-select-options';
-                
-                function updateOptions() {
-                    optionsContainer.innerHTML = '';
-                    Array.from(select.options).forEach((opt, idx) => {
-                        const optDiv = document.createElement('div');
-                        optDiv.className = 'custom-select-option' + (select.selectedIndex === idx ? ' selected' : '');
-                        optDiv.innerHTML = opt.innerHTML; // Allow emoji/icons
-                        optDiv.onclick = (e) => {
-                            e.stopPropagation();
-                            select.selectedIndex = idx;
-                            selectedText.innerHTML = opt.innerHTML;
-                            select.dispatchEvent(new Event('change'));
-                            wrapper.classList.remove('open');
-                            updateOptions();
-                        };
-                        optionsContainer.appendChild(optDiv);
-                    });
-                }
-                
-                updateOptions();
-                
-                trigger.onclick = (e) => {
-                    e.stopPropagation();
-                    document.querySelectorAll('.custom-select-wrapper').forEach(w => {
-                        if (w !== wrapper) w.classList.remove('open');
-                    });
-                    wrapper.classList.toggle('open');
-                    updateOptions(); // Refresh in case original select options changed dynamically
-                };
-                
-                wrapper.appendChild(trigger);
-                wrapper.appendChild(optionsContainer);
-                
-                // Watch for external changes to select
-                select.addEventListener('change', () => {
-                    selectedText.innerHTML = select.options[select.selectedIndex]?.innerHTML || '-- Select --';
-                    updateOptions();
-                });
-                
-                // Watch for options added/removed dynamically
-                const observer = new MutationObserver(() => {
-                    selectedText.innerHTML = select.options[select.selectedIndex]?.innerHTML || '-- Select --';
-                    updateOptions();
-                });
-                observer.observe(select, { childList: true });
-            });
-            
-            document.addEventListener('click', () => {
-                document.querySelectorAll('.custom-select-wrapper').forEach(w => w.classList.remove('open'));
-            });
-        }
-        setTimeout(createCustomDropdowns, 500);
-        
-        // DM List Rendering
-        let lastUserList = [];
-        function renderDMUsers(users) {
-            lastUserList = users;
-            const list = document.getElementById('dm-user-list');
-            if(!list) return;
-            if(!users || users.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#949ba4; font-size:0.875rem;">No users found</div>';
-                return;
-            }
-            
-            let htmlStr = '';
-            users.forEach(u => {
-                const isActive = u.id === currentChatUser;
-                const statusColor = u.presence === 'online' ? '#23a559' : u.presence === 'idle' ? '#f0b232' : u.presence === 'dnd' ? '#da373c' : '#80848e';
-                htmlStr += `
-                    <div class="dm-user-item ${isActive ? 'active' : ''}" onclick="loadUserChat('${u.id}', '${u.username.replace(/'/g, "\\'")}', '${u.presence || 'offline'}')">
-                        <div style="position:relative;">
-                            <img src="${u.avatar || 'https://cdn.discordapp.com/embed/avatars/0.png'}" style="width:32px; height:32px; border-radius:50%;">
-                            <div style="position:absolute; bottom:-2px; right:-2px; width:12px; height:12px; background:#2b2d31; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                                <div style="width:8px; height:8px; background:${statusColor}; border-radius:50%;"></div>
-                            </div>
-                        </div>
-                        <div style="font-weight:600; font-size:0.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escHtml(u.username)}</div>
-                    </div>
-                `;
-            });
-            list.innerHTML = htmlStr;
-            refreshIcons();
-        }
-
-        // Update loadUserChat to take username and presence
-        function loadUserChat(userId, username, presence) {
-            currentChatUser = userId;
-            currentChatUserName = username;
-            // Find avatar from lastUserList
-            const userObj = lastUserList.find(u => u.id === userId);
-            currentChatUserAvatar = userObj ? userObj.avatar : 'https://cdn.discordapp.com/embed/avatars/0.png';
-
-            const input = document.getElementById('chat-input');
-            const btn = document.getElementById('btn-send-chat');
-            const headerName = document.getElementById('chat-header-name');
-            const headerStatus = document.getElementById('chat-header-status');
-            const headerAvatar = document.getElementById('chat-header-avatar');
-            const presenceInner = document.getElementById('chat-header-presence-inner');
-
-            input.disabled = false; btn.disabled = false;
-            headerName.textContent = username;
-            input.placeholder = 'Message @' + username;
-
-            // Update header avatar
-            if (headerAvatar) headerAvatar.src = currentChatUserAvatar;
-
-            // Update presence dot + status text
-            const presenceColors = { online: '#23a559', idle: '#f0b232', dnd: '#da373c', offline: '#80848e' };
-            const presenceLabels = { online: 'Online', idle: 'Idle', dnd: 'Do Not Disturb', offline: 'Offline' };
-            if (presenceInner) presenceInner.style.background = presenceColors[presence] || '#80848e';
-            if (headerStatus) headerStatus.textContent = presenceLabels[presence] || 'Offline';
-
-            cancelReply();
-            document.getElementById('chat-messages').innerHTML = '<div data-placeholder style="display:flex;align-items:center;justify-content:center;height:100%;color:#949ba4;gap:8px;"><i data-lucide="loader-2" class="lucide-spin"></i> Loading...</div>';
-            refreshIcons();
-            socket.emit('get_dm_history', { userId });
-            document.getElementById('dm-badge').style.display = 'none';
-
-            // Re-render user list to update active state
-            renderDMUsers(lastUserList);
-        }
-
     </script>
 </body>
 </html>

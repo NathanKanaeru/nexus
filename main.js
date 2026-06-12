@@ -56,7 +56,7 @@ const defaultSettings = {
     defaultChannelId: process.env.CHANNEL_ID,
     autoJoinOnStart: true,
     autoReconnect: false,
-    panelTitle: 'Deltalitehub Bot Panel',
+    panelTitle: 'Nexus Bot Panel',
     statusType: 'online',       // online | idle | dnd | invisible
     activityType: 'PLAYING',    // PLAYING | WATCHING | LISTENING | COMPETING
     activityText: '',
@@ -194,7 +194,7 @@ app.get('/login', (req, res) => {
     <input type="password" name="password" autocomplete="current-password" required>
     <button type="submit">Sign In</button>
   </form>
-  <div class="footer">Deltalitehub Panel</div>
+  <div class="footer">Nexus Panel</div>
 </div>
 </body>
 </html>`);

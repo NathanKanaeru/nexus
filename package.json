@@ -2,9 +2,9 @@
   "name": "discord-bot-panel",
   "version": "1.0.0",
   "description": "Discord Bot Control Panel",
-  "main": "main.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node main.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.2",
